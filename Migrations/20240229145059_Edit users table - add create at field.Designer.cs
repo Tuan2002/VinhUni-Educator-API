@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -11,9 +12,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240229145059_Edit users table - add create at field")]
+    partial class Edituserstableaddcreateatfield
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,14 +52,6 @@ namespace VinhUni_Educator_API.Migrations
                         .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "9bac8314-e420-4b07-9322-5ed20415845e",
-                            Name = "Quản trị viên",
-                            NormalizedName = "QUẢN TRỊ VIÊN"
-                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -144,13 +139,6 @@ namespace VinhUni_Educator_API.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = "0ca9df2e-11be-4a25-910b-c5193c9e750a",
-                            RoleId = "9bac8314-e420-4b07-9322-5ed20415845e"
-                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -262,31 +250,6 @@ namespace VinhUni_Educator_API.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = "0ca9df2e-11be-4a25-910b-c5193c9e750a",
-                            AccessFailedCount = 0,
-                            Address = "Vinh, Nghệ An",
-                            ConcurrencyStamp = "c3162936-bc75-4267-a1df-87081031eadd",
-                            CreatedAt = new DateTime(2024, 2, 29, 14, 51, 59, 392, DateTimeKind.Utc).AddTicks(1620),
-                            DateOfBirth = new DateOnly(2002, 7, 2),
-                            Email = "admin@admin.com",
-                            EmailConfirmed = true,
-                            FirstName = "Nguyễn Ngọc Anh",
-                            Gender = 1,
-                            LastName = "Tuấn",
-                            LockoutEnabled = false,
-                            NormalizedEmail = "ADMIN@ADMIN.COM",
-                            NormalizedUserName = "ADMIN",
-                            PasswordHash = "AQAAAAIAAYagAAAAELaGwJv55Qa4HEE6x6j3EPjKC1IVLDzXqyuMnNoMpkTtOsL2N8yPInypcW7EUhvICw==",
-                            PhoneNumber = "0123456789",
-                            PhoneNumberConfirmed = false,
-                            SecurityStamp = "a98adf14-57ce-42ec-b043-66509d57b64f",
-                            TwoFactorEnabled = false,
-                            UserName = "admin"
-                        });
                 });
 
             modelBuilder.Entity("VinhUni_Educator_API.Entities.RefreshToken", b =>
