@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using VinhUni_Educator_API.Context;
+using VinhUni_Educator_API.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +9,10 @@ var connectionString = builder.Configuration.GetConnectionString("Development") 
 // Add services to connect to database
 builder.Services.AddDbContext<ApplicationDBContext>(options =>
     options.UseNpgsql(connectionString));
+
+// Add services to Identity
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => { options.SignIn.RequireConfirmedAccount = false; })
+    .AddEntityFrameworkStores<ApplicationDBContext>();
 // Add services to the container.
 
 builder.Services.AddControllers();
