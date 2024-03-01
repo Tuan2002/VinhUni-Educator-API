@@ -16,18 +16,20 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPost]
         [Route("login")]
-        public async Task<IActionResult> Login([FromBody] LoginModel model, string? provider)
+        public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var response = new ActionResponse();
-            switch (provider)
+            var response = await _authServices.LoginAsync(model);
+            if (!response.IsSuccess)
             {
-                case "sso":
-                    response = await _authServices.LoginSSOAsync(model);
-                    break;
-                default:
-                    response = await _authServices.LoginAsync(model);
-                    break;
+                return Unauthorized(response);
             }
+            return Ok(response);
+        }
+        [HttpPost]
+        [Route("login-sso")]
+        public async Task<IActionResult> LogiSSO([FromBody] LoginModel model)
+        {
+            var response = await _authServices.LoginSSOAsync(model);
             if (!response.IsSuccess)
             {
                 return Unauthorized(response);
