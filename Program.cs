@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
-using VinhUni_Educator_API.Services.Auth;
+using VinhUni_Educator_API.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,12 +79,19 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(
+    options =>
+    {
+        options.EnableAnnotations();
+        options.SwaggerDoc("v1", new OpenApiInfo { Title = "VinhUni Educator API", Version = "v1" });
+    }
+);
 
 // Add services to lower case url
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
-// Add services to application services
+// Add services to application IoC
 builder.Services.AddScoped<IAuthServices, AuthServices>();
+builder.Services.AddScoped<IJwtServices, JwtServices>();
 
 var app = builder.Build();
 
@@ -89,7 +99,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
+    });
 }
 
 app.UseHttpsRedirection();

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
 using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Utils;
@@ -7,34 +8,87 @@ namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [SwaggerTag("Xác thực người dùng")]
     public class AuthController : ControllerBase
     {
         private readonly IAuthServices _authServices;
-        public AuthController(IAuthServices authServices)
+        private readonly ILogger<AuthController> _logger;
+        public AuthController(IAuthServices authServices, ILogger<AuthController> logger)
         {
             _authServices = authServices;
+            _logger = logger;
         }
         [HttpPost]
         [Route("login")]
+        [SwaggerOperation(Summary = "Đăng nhập bằng tài khoản hệ thống", Description = "Đăng nhập hệ thống bằng tài khoản và mật khẩu")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var response = await _authServices.LoginAsync(model);
-            if (!response.IsSuccess)
+            if (!ModelState.IsValid)
             {
-                return Unauthorized(response);
+                return BadRequest(
+                    new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Thông tin đăng nhập không hợp lệ"
+                    }
+                );
             }
-            return Ok(response);
+            try
+            {
+                var response = await _authServices.LoginAsync(model);
+                if (!response.IsSuccess)
+                {
+                    return Unauthorized(response);
+                }
+                return Ok(response);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while logging in: {e.Message} at {DateTime.UtcNow}");
+                return StatusCode(500, new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra, vui lòng thử lại sau"
+                });
+            }
         }
         [HttpPost]
         [Route("login-sso")]
-        public async Task<IActionResult> LogiSSO([FromBody] LoginModel model)
+        [SwaggerOperation(Summary = "Đăng nhập bằng tài khoản cổng sinh viên", Description = "Đăng nhập hệ thống bằng tài khoản hệ thống trường đại học Đại học Vinh")]
+        public async Task<IActionResult> LoginSSO([FromBody] LoginModel model)
         {
-            var response = await _authServices.LoginSSOAsync(model);
-            if (!response.IsSuccess)
+            if (!ModelState.IsValid)
             {
-                return Unauthorized(response);
+                return BadRequest(
+                    new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Thông tin đăng nhập không hợp lệ"
+                    }
+                );
             }
-            return Ok(response);
+            try
+            {
+                var response = await _authServices.LoginSSOAsync(model);
+                if (!response.IsSuccess)
+                {
+                    return Unauthorized(response);
+                }
+                return Ok(response);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while logging in: {e.Message} at {DateTime.UtcNow}");
+                return StatusCode(500, new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra, vui lòng thử lại sau"
+                });
+            }
         }
 
     }

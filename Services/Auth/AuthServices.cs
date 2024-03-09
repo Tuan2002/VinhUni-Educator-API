@@ -11,52 +11,59 @@ using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Utils;
 
-namespace VinhUni_Educator_API.Services.Auth
+namespace VinhUni_Educator_API.Services
 {
     public class AuthServices : IAuthServices
     {
         private readonly ILogger<AuthServices> _logger;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IConfiguration _configuration;
+        private readonly IJwtServices _jwtServices;
         private readonly ApplicationDBContext _context;
+        private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        public AuthServices(ILogger<AuthServices> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDBContext context, IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+        public AuthServices(ILogger<AuthServices> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDBContext context, IJwtServices jwtServices, IHttpContextAccessor httpContextAccessor)
         {
             _logger = logger;
             _userManager = userManager;
             _signInManager = signInManager;
+            _jwtServices = jwtServices;
             _context = context;
-            _configuration = configuration;
             _httpContextAccessor = httpContextAccessor;
+            _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         }
         public async Task<ActionResponse> LoginAsync(LoginModel model)
         {
-            var response = new ActionResponse();
-            var userName = model.UserName ?? string.Empty;
-            if (string.IsNullOrEmpty(userName))
+            if (model == null)
             {
-                response.IsSuccess = false;
-                response.Message = "Email hoặc tên người dùng không được để trống";
-                return response;
+                return new ActionResponse
+                {
+                    StatusCode = 400,
+                    IsSuccess = false,
+                    Message = "Dữ liệu không hợp lệ"
+                };
             }
             try
             {
-                var user = await _userManager.FindByEmailAsync(userName) ?? await _userManager.FindByNameAsync(userName);
+                var user = await _userManager.FindByEmailAsync(model.UserName) ?? await _userManager.FindByNameAsync(model.UserName);
                 if (user == null)
                 {
-                    response.StatusCode = 401;
-                    response.IsSuccess = false;
-                    response.Message = "Tên người dùng hoặc mật khẩu không chính xác";
-                    return response;
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Tên người dùng hoặc mật khẩu không chính xác"
+                    };
                 }
                 var result = await _signInManager.PasswordSignInAsync(user, model.Password, false, false);
                 if (!result.Succeeded)
                 {
-                    response.StatusCode = 401;
-                    response.IsSuccess = false;
-                    response.Message = "Tên người dùng hoặc mật khẩu không chính xác";
-                    return response;
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Tên người dùng hoặc mật khẩu không chính xác"
+                    };
                 }
                 var userRoles = await _userManager.GetRolesAsync(user);
                 var refreshTokenId = Guid.NewGuid().ToString();
@@ -65,6 +72,7 @@ namespace VinhUni_Educator_API.Services.Auth
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id),
                     new Claim(JwtRegisteredClaimNames.Jti, accessTokenId),
+                    new Claim(ClaimTypes.Name, user.UserName ?? ""),
                 };
                 var refreshTokenClaims = new List<Claim>
                 {
@@ -76,9 +84,8 @@ namespace VinhUni_Educator_API.Services.Auth
                     accessTokenClaims.Add(new Claim(ClaimTypes.Role, userRole));
                 }
                 _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
-                var helper = new JWTHelper(_configuration, _logger);
-                var accessToken = helper.CreateToken(accessTokenClaims);
-                var refreshToken = helper.GenerateRefreshToken(refreshTokenClaims);
+                var accessToken = _jwtServices.GenerateAccessToken(accessTokenClaims);
+                var refreshToken = _jwtServices.GenerateRefreshToken(refreshTokenClaims);
                 if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
                 {
                     throw new InvalidOperationException("Token or Refresh Token invalid.");
@@ -102,22 +109,27 @@ namespace VinhUni_Educator_API.Services.Auth
                     SameSite = SameSiteMode.None,
                     Expires = DateTime.UtcNow.AddDays(tokenValidityInDays)
                 });
-                response.StatusCode = 200;
-                response.IsSuccess = true;
-                response.Message = "Đăng nhập thành công";
-                response.Data = new
+                return new ActionResponse
                 {
-                    accessToken,
-                    refreshToken
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Đăng nhập thành công",
+                    Data = new
+                    {
+                        accessToken,
+                        refreshToken
+                    }
                 };
-                return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, ex.Message);
-                response.IsSuccess = false;
-                response.Message = "Lỗi máy chủ, vui lòng thử lại sau";
-                return response;
+                _logger.LogError($"Error occurred while logging in: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Lỗi máy chủ, vui lòng thử lại sau"
+                };
             }
         }
         public async Task<ActionResponse> LoginSSOAsync(LoginModel model)
@@ -181,14 +193,13 @@ namespace VinhUni_Educator_API.Services.Auth
                 };
             }
             var uSmartAccessToken = fragments.access_token;
-            var JWTHelper = new JWTHelper(_configuration, _logger);
-            List<Claim> claims = JWTHelper.GetClaims(uSmartAccessToken);
+            List<Claim> claims = _jwtServices.GetTokenClaims(uSmartAccessToken);
             string? userId = claims?.FirstOrDefault(c => c.Type == "userid")?.Value.ToString();
             if (string.IsNullOrEmpty(userId))
             {
                 return new ActionResponse
                 {
-                    StatusCode = (int)getTokenResponse.StatusCode,
+                    StatusCode = 500,
                     IsSuccess = false,
                     Message = "Lỗi xác thực, vui lòng thử lại"
                 };
@@ -221,9 +232,8 @@ namespace VinhUni_Educator_API.Services.Auth
                 accessTokenClaims.Add(new Claim(ClaimTypes.Role, userRole));
             }
             _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
-            var helper = new JWTHelper(_configuration, _logger);
-            var accessToken = helper.CreateToken(accessTokenClaims);
-            var refreshToken = helper.GenerateRefreshToken(refreshTokenClaims);
+            var accessToken = _jwtServices.GenerateAccessToken(accessTokenClaims);
+            var refreshToken = _jwtServices.GenerateRefreshToken(refreshTokenClaims);
             if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
             {
                 throw new InvalidOperationException("Token or Refresh Token invalid.");
@@ -240,7 +250,6 @@ namespace VinhUni_Educator_API.Services.Auth
             };
             _context.RefreshTokens.Add(userRefreshToken);
             await _context.SaveChangesAsync();
-
             _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
             {
                 HttpOnly = true,

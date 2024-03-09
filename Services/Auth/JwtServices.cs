@@ -1,21 +1,22 @@
+
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using VinhUni_Educator_API.Services.Auth;
+using VinhUni_Educator_API.Interfaces;
 
-namespace VinhUni_Educator_API.Helpers
+namespace VinhUni_Educator_API.Services
 {
-    public class JWTHelper
+    public class JwtServices : IJwtServices
     {
         private readonly IConfiguration _configuration;
-        private readonly ILogger<AuthServices> _logger;
-        public JWTHelper(IConfiguration configuration, ILogger<AuthServices> logger)
+        private readonly ILogger<JwtServices> _logger;
+        public JwtServices(IConfiguration configuration, ILogger<JwtServices> logger)
         {
-            _configuration = configuration;
             _logger = logger;
+            _configuration = configuration;
         }
-        public string? CreateToken(List<Claim> authClaims)
+        public string? GenerateAccessToken(List<Claim> authClaims)
         {
             var accessTokenSecret = _configuration["JWT:AccessTokenSecret"];
             if (string.IsNullOrEmpty(accessTokenSecret))
@@ -41,7 +42,6 @@ namespace VinhUni_Educator_API.Helpers
                 return null;
             }
         }
-
         public string? GenerateRefreshToken(List<Claim> authClaims)
         {
             _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
@@ -68,7 +68,11 @@ namespace VinhUni_Educator_API.Helpers
                 return null;
             }
         }
-        public bool IsAccessTokenExpired(string token)
+        public List<Claim> GetTokenClaims(string token)
+        {
+            throw new NotImplementedException();
+        }
+        public bool ValidateAccessToken(string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var accessTokenSecret = _configuration["JWT:AccessTokenSecret"];
@@ -87,7 +91,7 @@ namespace VinhUni_Educator_API.Helpers
                 };
 
                 tokenHandler.ValidateToken(token, validationParameters, out SecurityToken validatedToken);
-                return false; // Token is valid and not expired
+                return false; // Token is valid
             }
             catch (SecurityTokenExpiredException)
             {
@@ -98,7 +102,7 @@ namespace VinhUni_Educator_API.Helpers
                 return true; // Token is invalid
             }
         }
-        public bool IsRefreshTokenExpired(string token)
+        public bool ValidateRefreshToken(string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
             var refreshTokenSecret = _configuration["JWT:RefreshTokenSecret"];
@@ -128,12 +132,23 @@ namespace VinhUni_Educator_API.Helpers
                 return true; // Token is invalid
             }
         }
-        public List<Claim>? GetClaims(string token)
+        public bool IsTokenExpired(string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            if (tokenHandler.ReadToken(token) is JwtSecurityToken securityToken)
-                return securityToken.Claims.ToList();
-            return null;
+            try
+            {
+                var checkToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+                if (checkToken != null && checkToken.ValidTo < DateTime.UtcNow)
+                {
+                    return true;
+                }
+                return false;
+            }
+            catch (Exception)
+            {
+                return true;
+            }
         }
+
     }
 }
