@@ -1,11 +1,12 @@
 using System.Security.Claims;
+using VinhUni_Educator_API.Utils;
 
 namespace VinhUni_Educator_API.Interfaces
 {
     public interface IJwtServices
     {
-        string? GenerateAccessToken(List<Claim> authClaims);
-        string? GenerateRefreshToken(List<Claim> authClaims);
+        TokenResponse? GenerateAccessToken(List<Claim> authClaims);
+        TokenResponse? GenerateRefreshToken(List<Claim> authClaims);
         bool ValidateRefreshToken(string token);
         bool ValidateAccessToken(string token);
         bool IsTokenExpired(string token);

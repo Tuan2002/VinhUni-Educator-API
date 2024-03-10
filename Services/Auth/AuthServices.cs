@@ -1,7 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using RestSharp.Authenticators;
 using VinhUni_Educator_API.Context;
@@ -22,7 +24,9 @@ namespace VinhUni_Educator_API.Services
         private readonly ApplicationDBContext _context;
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        public AuthServices(ILogger<AuthServices> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDBContext context, IJwtServices jwtServices, IHttpContextAccessor httpContextAccessor)
+        private readonly ICacheServices _cacheServices;
+        private readonly IMapper _mapper;
+        public AuthServices(ILogger<AuthServices> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDBContext context, IJwtServices jwtServices, IHttpContextAccessor httpContextAccessor, ICacheServices cacheServices, IMapper mapper)
         {
             _logger = logger;
             _userManager = userManager;
@@ -30,19 +34,12 @@ namespace VinhUni_Educator_API.Services
             _jwtServices = jwtServices;
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _cacheServices = cacheServices;
+            _mapper = mapper;
             _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
         }
         public async Task<ActionResponse> LoginAsync(LoginModel model)
         {
-            if (model == null)
-            {
-                return new ActionResponse
-                {
-                    StatusCode = 400,
-                    IsSuccess = false,
-                    Message = "Dữ liệu không hợp lệ"
-                };
-            }
             try
             {
                 var user = await _userManager.FindByEmailAsync(model.UserName) ?? await _userManager.FindByNameAsync(model.UserName);
@@ -66,48 +63,39 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var userRoles = await _userManager.GetRolesAsync(user);
-                var refreshTokenId = Guid.NewGuid().ToString();
-                var accessTokenId = Guid.NewGuid().ToString();
-                var accessTokenClaims = new List<Claim>
+                var tokenClaims = new List<Claim>
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim(JwtRegisteredClaimNames.Jti, accessTokenId),
                     new Claim(ClaimTypes.Name, user.UserName ?? ""),
+                    new Claim(type: "LastName", user.LastName ?? ""),
+                    new Claim(type: "FirstName", user.FirstName ?? ""),
                 };
-                var refreshTokenClaims = new List<Claim>
-                {
-                    new Claim(ClaimTypes.NameIdentifier, user.Id),
-                    new Claim(JwtRegisteredClaimNames.Jti, refreshTokenId),
-                };
-                foreach (var userRole in userRoles)
-                {
-                    accessTokenClaims.Add(new Claim(ClaimTypes.Role, userRole));
-                }
-                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
-                var accessToken = _jwtServices.GenerateAccessToken(accessTokenClaims);
-                var refreshToken = _jwtServices.GenerateRefreshToken(refreshTokenClaims);
-                if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+                tokenClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                var accessTokenResponse = _jwtServices.GenerateAccessToken(tokenClaims);
+                var refreshTokenResponse = _jwtServices.GenerateRefreshToken(tokenClaims);
+                if (accessTokenResponse == null || refreshTokenResponse == null)
                 {
                     throw new InvalidOperationException("Token or Refresh Token invalid.");
                 }
                 var userRefreshToken = new RefreshToken
                 {
-                    JwtId = refreshTokenId,
-                    Token = refreshToken,
+                    JwtId = refreshTokenResponse.TokenId,
+                    Token = refreshTokenResponse.Token,
                     DateAdded = DateTime.UtcNow,
-                    DateExpire = DateTime.UtcNow.AddDays(tokenValidityInDays),
+                    DateExpire = refreshTokenResponse.Expiration,
                     IsUsed = false,
                     IsRevoked = false,
                     UserId = user.Id
                 };
+                var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(refreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(refreshTokenResponse.Expiration));
                 _context.RefreshTokens.Add(userRefreshToken);
-                await _context.SaveChangesAsync();
-                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+                _context.SaveChanges();
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshTokenResponse.Token, new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.None,
-                    Expires = DateTime.UtcNow.AddDays(tokenValidityInDays)
+                    Expires = refreshTokenResponse.Expiration
                 });
                 return new ActionResponse
                 {
@@ -116,8 +104,8 @@ namespace VinhUni_Educator_API.Services
                     Message = "Đăng nhập thành công",
                     Data = new
                     {
-                        accessToken,
-                        refreshToken
+                        accessToken = accessTokenResponse.Token,
+                        refreshToken = refreshTokenResponse.Token
                     }
                 };
             }
@@ -211,51 +199,43 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 404,
                     IsSuccess = false,
-                    Message = "Tài khoản không tồn tại"
+                    Message = "Tài khoản người dùng không tồn tại không tồn tại"
                 };
             }
             var userRoles = await _userManager.GetRolesAsync(user);
-            var refreshTokenId = Guid.NewGuid().ToString();
-            var accessTokenId = Guid.NewGuid().ToString();
-            var accessTokenClaims = new List<Claim>
+            var tokenClaims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(JwtRegisteredClaimNames.Jti, accessTokenId),
+                new Claim(ClaimTypes.Name, user.UserName ?? ""),
+                new Claim(type: "LastName", user.LastName ?? ""),
+                new Claim(type: "FirstName", user.FirstName ?? ""),
             };
-            var refreshTokenClaims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(JwtRegisteredClaimNames.Jti, refreshTokenId),
-            };
-            foreach (var userRole in userRoles)
-            {
-                accessTokenClaims.Add(new Claim(ClaimTypes.Role, userRole));
-            }
-            _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
-            var accessToken = _jwtServices.GenerateAccessToken(accessTokenClaims);
-            var refreshToken = _jwtServices.GenerateRefreshToken(refreshTokenClaims);
-            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+            tokenClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+            var accessTokenResponse = _jwtServices.GenerateAccessToken(tokenClaims);
+            var refreshTokenResponse = _jwtServices.GenerateRefreshToken(tokenClaims);
+            if (accessTokenResponse == null || refreshTokenResponse == null)
             {
                 throw new InvalidOperationException("Token or Refresh Token invalid.");
             }
             var userRefreshToken = new RefreshToken
             {
-                JwtId = refreshTokenId,
-                Token = refreshToken,
+                JwtId = refreshTokenResponse.TokenId,
+                Token = refreshTokenResponse.Token,
                 DateAdded = DateTime.UtcNow,
-                DateExpire = DateTime.UtcNow.AddDays(tokenValidityInDays),
+                DateExpire = refreshTokenResponse.Expiration,
                 IsUsed = false,
                 IsRevoked = false,
                 UserId = user.Id
             };
+            var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(refreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(refreshTokenResponse.Expiration));
             _context.RefreshTokens.Add(userRefreshToken);
-            await _context.SaveChangesAsync();
-            _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            _context.SaveChanges();
+            _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshTokenResponse.Token, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTime.UtcNow.AddDays(tokenValidityInDays)
+                Expires = refreshTokenResponse.Expiration
             });
             return new ActionResponse
             {
@@ -264,10 +244,92 @@ namespace VinhUni_Educator_API.Services
                 Message = "Đăng nhập thành công",
                 Data = new
                 {
-                    accessToken,
-                    refreshToken
+                    accessToken = accessTokenResponse.Token,
+                    refreshToken = refreshTokenResponse.Token
                 }
             };
         }
+        public async Task<ActionResponse> RefreshTokenAsync(string refreshToken)
+        {
+            try
+            {
+                // Check token from user request
+                var tokenClaims = _jwtServices.GetTokenClaims(refreshToken);
+                var refreshTokenId = tokenClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                var userId = tokenClaims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(refreshTokenId) || userId == null || !_jwtServices.ValidateRefreshToken(refreshToken))
+                {
+                    throw new InvalidOperationException("Token invalid");
+                }
+                // Check token from cache or database
+                var storedRefreshToken = (await _cacheServices.GetDataAsync<RefreshToken>(refreshTokenId) ?? await _context.RefreshTokens.Where(rt => rt.JwtId == refreshTokenId).FirstOrDefaultAsync()) ?? throw new InvalidOperationException("Token invalid");
+                var storedTokenClaims = _jwtServices.GetTokenClaims(storedRefreshToken.Token);
+                var isClaimValid = storedTokenClaims.All(c => tokenClaims.Any(tc => tc.Type == c.Type && tc.Value == c.Value));
+                if (storedRefreshToken.IsUsed || !isClaimValid || !_jwtServices.ValidateRefreshToken(storedRefreshToken.Token))
+                {
+                    throw new InvalidOperationException("Token invalid");
+                }
+                var newRefreshTokenResponse = _jwtServices.GenerateRefreshToken(storedTokenClaims);
+                var newAccessTokenResponse = _jwtServices.GenerateAccessToken(storedTokenClaims);
+                if (newRefreshTokenResponse == null || newAccessTokenResponse == null)
+                {
+                    throw new InvalidOperationException("Cannot generate token");
+                }
+                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
+                var userRefreshToken = new RefreshToken
+                {
+                    JwtId = newRefreshTokenResponse.TokenId,
+                    Token = newRefreshTokenResponse.Token,
+                    DateAdded = DateTime.UtcNow,
+                    DateExpire = newRefreshTokenResponse.Expiration,
+                    IsUsed = false,
+                    IsRevoked = false,
+                    UserId = userId
+                };
+                var removeCache = await _cacheServices.RemoveDataAsync(refreshTokenId);
+                var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(newRefreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(newRefreshTokenResponse.Expiration));
+                _context.RefreshTokens.Remove(storedRefreshToken);
+                _context.RefreshTokens.Add(userRefreshToken);
+                _context.SaveChanges();
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", newRefreshTokenResponse.Token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Expires = DateTime.UtcNow.AddDays(tokenValidityInDays)
+                });
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Token đã được cập nhật",
+                    Data = new
+                    {
+                        accessToken = newAccessTokenResponse.Token,
+                        refreshToken = newRefreshTokenResponse.Token
+                    }
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while refreshing token: {e.Message} at {DateTime.UtcNow}");
+                if (e is InvalidOperationException && e.Message == "Token invalid")
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 401,
+                        IsSuccess = false,
+                        Message = "Token không hợp lệ"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra ở máy chủ, vui lòng thử lại sau hoặc liên hệ với quản trị viên"
+                };
+            }
+        }
+
     }
 }

@@ -90,6 +90,42 @@ namespace VinhUni_Educator_API.Controllers
                 });
             }
         }
+        [HttpGet]
+        [Route("refresh-token")]
+        [SwaggerOperation(Summary = "Lấy access-token mới", Description = "Lấy access-token khi token đã hết hạn")]
+        public async Task<IActionResult> RefreshToken(string token)
+        {
+            if (string.IsNullOrEmpty(token))
+            {
+                return BadRequest(
+                    new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Token không hợp lệ"
+                    }
+                );
+            }
+            try
+            {
+                var response = await _authServices.RefreshTokenAsync(token);
+                if (!response.IsSuccess)
+                {
+                    return Unauthorized(response);
+                }
+                return Ok(response);
 
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while refreshing token: {e.Message} at {DateTime.UtcNow}");
+                return StatusCode(500, new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra, vui lòng thử lại sau"
+                });
+            }
+        }
     }
 }
