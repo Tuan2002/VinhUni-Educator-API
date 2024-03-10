@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using VinhUni_Educator_API.Interfaces;
@@ -39,7 +41,7 @@ namespace VinhUni_Educator_API.Controllers
                 var response = await _authServices.LoginAsync(model);
                 if (!response.IsSuccess)
                 {
-                    return Unauthorized(response);
+                    return StatusCode(response.StatusCode, response);
                 }
                 return Ok(response);
             }
@@ -50,7 +52,7 @@ namespace VinhUni_Educator_API.Controllers
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Có lỗi xảy ra, vui lòng thử lại sau"
+                    Message = "Error occurred while logging in, please try again later or contact administrator"
                 });
             }
         }
@@ -75,7 +77,7 @@ namespace VinhUni_Educator_API.Controllers
                 var response = await _authServices.LoginSSOAsync(model);
                 if (!response.IsSuccess)
                 {
-                    return Unauthorized(response);
+                    return StatusCode(response.StatusCode, response);
                 }
                 return Ok(response);
             }
@@ -86,32 +88,59 @@ namespace VinhUni_Educator_API.Controllers
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Có lỗi xảy ra, vui lòng thử lại sau"
+                    Message = "Error occurred while logging in, please try again later or contact administrator"
                 });
             }
         }
         [HttpGet]
+        [Route("me")]
+        [Authorize]
+        [SwaggerOperation(Summary = "Lấy thông tin người dùng", Description = "Lấy thông tin người dùng hiện tại")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            try
+            {
+                var response = await _authServices.GetCurrentUserAsync();
+                if (!response.IsSuccess)
+                {
+                    throw new Exception(response.Message);
+                }
+                return Ok(response);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting current user: {e.Message} at {DateTime.UtcNow}");
+                return StatusCode(500, new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Error occurred while getting current user, please try again later or contact administrator"
+                });
+            }
+        }
+        [HttpPost]
         [Route("refresh-token")]
         [SwaggerOperation(Summary = "Lấy access-token mới", Description = "Lấy access-token khi token đã hết hạn")]
-        public async Task<IActionResult> RefreshToken(string token)
+        public async Task<IActionResult> RefreshToken()
         {
-            if (string.IsNullOrEmpty(token))
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
             {
-                return BadRequest(
+                return Unauthorized(
                     new ActionResponse
                     {
-                        StatusCode = 400,
+                        StatusCode = 401,
                         IsSuccess = false,
-                        Message = "Token không hợp lệ"
+                        Message = "You are not authorized, please login to get access"
                     }
                 );
             }
             try
             {
-                var response = await _authServices.RefreshTokenAsync(token);
+                var response = await _authServices.RefreshTokenAsync(refreshToken);
                 if (!response.IsSuccess)
                 {
-                    return Unauthorized(response);
+                    return StatusCode(response.StatusCode, response);
                 }
                 return Ok(response);
 
@@ -123,7 +152,46 @@ namespace VinhUni_Educator_API.Controllers
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Có lỗi xảy ra, vui lòng thử lại sau"
+                    Message = "Error occurred while refreshing token, please try again later or contact administrator"
+                });
+            }
+        }
+        [HttpPost]
+        [Route("logout")]
+        [Authorize]
+        [SwaggerOperation(Summary = "Đăng xuất", Description = "Đăng xuất khỏi hệ thống")]
+        public async Task<IActionResult> Logout()
+        {
+            var accessToken = await Request.HttpContext.GetTokenAsync("access_token");
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
+            {
+                return Unauthorized(
+                    new ActionResponse
+                    {
+                        StatusCode = 401,
+                        IsSuccess = false,
+                        Message = "You are not authorized, please login to get access"
+                    }
+                );
+            }
+            try
+            {
+                var response = await _authServices.LogoutAsync(accessToken, refreshToken);
+                if (!response.IsSuccess)
+                {
+                    return StatusCode(response.StatusCode, response);
+                }
+                return Ok(response);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while logging out: {e.Message} at {DateTime.UtcNow}");
+                return StatusCode(500, new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Error occurred while logging out, please try again later or contact administrator"
                 });
             }
         }

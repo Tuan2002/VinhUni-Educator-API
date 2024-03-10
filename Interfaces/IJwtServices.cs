@@ -10,6 +10,7 @@ namespace VinhUni_Educator_API.Interfaces
         bool ValidateRefreshToken(string token);
         bool ValidateAccessToken(string token);
         bool IsTokenExpired(string token);
+        DateTimeOffset GetRemainingExpiration(string token);
         List<Claim> GetTokenClaims(string token);
 
 

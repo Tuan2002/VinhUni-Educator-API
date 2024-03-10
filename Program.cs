@@ -9,8 +9,9 @@ using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
+using VinhUni_Educator_API.Middlewares;
 using VinhUni_Educator_API.Services;
-
+using VinhUni_Educator_API.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -49,11 +50,9 @@ builder.Services.AddAuthentication(options =>
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
     options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-
-// Adding Jwt Bearer
-.AddJwtBearer(options =>
+}).AddJwtBearer(options =>
 {
+    // Adding Jwt Bearer
     options.SaveToken = true;
     options.RequireHttpsMetadata = false;
     options.TokenValidationParameters = new TokenValidationParameters()
@@ -75,7 +74,14 @@ builder.Services.AddAuthentication(options =>
             context.HandleResponse();
             // Write to the response in any way you wish
             context.Response.StatusCode = 401;
-            await context.Response.WriteAsync("Unauthorized");
+            await context.Response.WriteAsJsonAsync(
+                new ActionResponse
+                {
+                    StatusCode = 401,
+                    IsSuccess = false,
+                    Message = "You are not authorized, please login to get access"
+                }
+            );
         }
     };
 });
@@ -113,13 +119,15 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    app.UseSwaggerUI(config =>
     {
-        c.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
+        config.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
     });
 }
-
+app.UseCors(policyName);
 app.UseHttpsRedirection();
+app.UseMiddleware<VerifyRevokedToken>();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

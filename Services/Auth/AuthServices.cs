@@ -326,7 +326,85 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Có lỗi xảy ra ở máy chủ, vui lòng thử lại sau hoặc liên hệ với quản trị viên"
+                    Message = "Error occurred while refreshing token, please try again later or contact administrator"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetCurrentUserAsync()
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (userId is null)
+                {
+                    throw new InvalidOperationException("UserId not found");
+                }
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Tài khoản người dùng không tồn tại"
+                    };
+                }
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var userInfo = _mapper.Map<PublicUserModel>(user);
+                userInfo.Roles = userRoles;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = new
+                    {
+                        userInfo
+                    }
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting current user: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Error occurred while getting current user, please try again later or contact administrator"
+                };
+            }
+        }
+        public async Task<ActionResponse> LogoutAsync(string accessToken, string refreshToken)
+        {
+            try
+            {
+                var accessTokenClaims = _jwtServices.GetTokenClaims(accessToken);
+                var refreshTokenClaims = _jwtServices.GetTokenClaims(refreshToken);
+                var accessTokenId = accessTokenClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                var refreshTokenId = refreshTokenClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                if (string.IsNullOrEmpty(accessTokenId) || string.IsNullOrEmpty(refreshTokenId))
+                {
+                    throw new InvalidOperationException("Không thể đăng xuất người dùng");
+                }
+                var addRevokedToken = await _cacheServices.SetDataAsync<string>($"RevokedID:{accessTokenId}", accessToken, _jwtServices.GetRemainingExpiration(accessToken));
+                var removeRefreshToken = await _cacheServices.RemoveDataAsync(refreshTokenId);
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Delete("refreshToken");
+                _context.RefreshTokens.RemoveRange(_context.RefreshTokens.Where(rt => rt.JwtId == refreshTokenId));
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Đăng xuất thành công"
+                };
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while logging out: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Cannot logout user, please try again later or contact administrator"
                 };
             }
         }

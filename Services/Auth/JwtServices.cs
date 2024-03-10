@@ -174,6 +174,23 @@ namespace VinhUni_Educator_API.Services
                 return false; // Token is invalid
             }
         }
+        public DateTimeOffset GetRemainingExpiration(string token)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            try
+            {
+                var checkToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+                if (checkToken != null)
+                {
+                    return new DateTimeOffset(checkToken.ValidTo);
+                }
+                return new DateTimeOffset(DateTime.UtcNow.AddSeconds(10));
+            }
+            catch (Exception)
+            {
+                return new DateTimeOffset(DateTime.UtcNow.AddSeconds(10));
+            }
+        }
         public bool IsTokenExpired(string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();

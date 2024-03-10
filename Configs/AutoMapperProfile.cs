@@ -9,6 +9,7 @@ namespace VinhUni_Educator_API.Configs
         public AutoMapperProfile()
         {
             CreateMap<RefreshToken, RefreshTokenModel>();
+            CreateMap<ApplicationUser, PublicUserModel>();
         }
     }
 }
