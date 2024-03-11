@@ -227,6 +227,25 @@ namespace VinhUni_Educator_API.Services
                 IsRevoked = false,
                 UserId = user.Id
             };
+            var uSmartToken = _context.USmartTokens.Where(ut => ut.UserId == user.Id).FirstOrDefault();
+            if (uSmartToken != null)
+            {
+                uSmartToken.Token = uSmartAccessToken;
+                uSmartToken.ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken);
+                uSmartToken.IsExpired = false;
+                _context.USmartTokens.Update(uSmartToken);
+            }
+            else
+            {
+                uSmartToken = new USmartToken
+                {
+                    Token = uSmartAccessToken,
+                    UserId = user.Id,
+                    ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken),
+                    IsExpired = false
+                };
+                _context.USmartTokens.Add(uSmartToken);
+            }
             var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(refreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(refreshTokenResponse.Expiration));
             _context.RefreshTokens.Add(userRefreshToken);
             _context.SaveChanges();
@@ -356,10 +375,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Data = new
-                    {
-                        userInfo
-                    }
+                    Data = userInfo
                 };
             }
             catch (Exception e)

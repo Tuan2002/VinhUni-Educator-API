@@ -105,6 +105,7 @@ builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IJwtServices, JwtServices>();
 builder.Services.AddScoped<ICacheServices, CacheServices>();
+builder.Services.AddScoped<IOrganizationServices, OrganizationServices>();
 
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>

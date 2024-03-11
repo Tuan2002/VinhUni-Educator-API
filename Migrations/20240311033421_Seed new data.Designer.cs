@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -11,9 +12,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240311033421_Seed new data")]
+    partial class Seednewdata
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,6 +52,14 @@ namespace VinhUni_Educator_API.Migrations
                         .HasDatabaseName("RoleNameIndex");
 
                     b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "e66cb6f0-9a39-4c93-9eb1-24a1381c4964",
+                            Name = "Quản trị viên",
+                            NormalizedName = "QUẢN TRỊ VIÊN"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -136,6 +147,13 @@ namespace VinhUni_Educator_API.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("AspNetUserRoles", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            UserId = "fb72c472-84df-4ce1-9db1-10fb7340b25e",
+                            RoleId = "e66cb6f0-9a39-4c93-9eb1-24a1381c4964"
+                        });
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
@@ -247,41 +265,32 @@ namespace VinhUni_Educator_API.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
-                });
 
-            modelBuilder.Entity("VinhUni_Educator_API.Entities.Organization", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("CreatorId")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("OrganizationCode")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("OrganizationName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatorId");
-
-                    b.ToTable("Organizations");
+                    b.HasData(
+                        new
+                        {
+                            Id = "fb72c472-84df-4ce1-9db1-10fb7340b25e",
+                            AccessFailedCount = 0,
+                            Address = "Vinh, Nghệ An",
+                            ConcurrencyStamp = "8a3d0359-07c5-482b-98c5-f906b1268464",
+                            CreatedAt = new DateTime(2024, 3, 11, 3, 34, 21, 256, DateTimeKind.Utc).AddTicks(6560),
+                            DateOfBirth = new DateOnly(2002, 7, 2),
+                            Email = "admin@admin.com",
+                            EmailConfirmed = true,
+                            FirstName = "Nguyễn Ngọc Anh",
+                            Gender = 1,
+                            LastName = "Tuấn",
+                            LockoutEnabled = false,
+                            NormalizedEmail = "ADMIN@ADMIN.COM",
+                            NormalizedUserName = "ADMIN",
+                            PasswordHash = "AQAAAAIAAYagAAAAEP/xcswT8ruU1spMFTOie+YnBvQsSt3kBHusPNPCZM3udN41Tu0xdP+M/Fa32xgOmw==",
+                            PhoneNumber = "0123456789",
+                            PhoneNumberConfirmed = false,
+                            SecurityStamp = "df5b0f9a-2992-462c-9e67-5ced5b3df629",
+                            TwoFactorEnabled = false,
+                            USmartId = 78592,
+                            UserName = "admin"
+                        });
                 });
 
             modelBuilder.Entity("VinhUni_Educator_API.Entities.RefreshToken", b =>
@@ -314,44 +323,6 @@ namespace VinhUni_Educator_API.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("RefreshTokens");
-                });
-
-            modelBuilder.Entity("VinhUni_Educator_API.Entities.SyncActions", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("ActionName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("CreatedBy")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Error")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("Status")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("SyncAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedBy");
-
-                    b.ToTable("SyncActions");
                 });
 
             modelBuilder.Entity("VinhUni_Educator_API.Entities.USmartToken", b =>
@@ -434,31 +405,11 @@ namespace VinhUni_Educator_API.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("VinhUni_Educator_API.Entities.Organization", b =>
-                {
-                    b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "Creator")
-                        .WithMany()
-                        .HasForeignKey("CreatorId");
-
-                    b.Navigation("Creator");
-                });
-
             modelBuilder.Entity("VinhUni_Educator_API.Entities.RefreshToken", b =>
                 {
                     b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "User")
                         .WithMany("RefreshTokens")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("VinhUni_Educator_API.Entities.SyncActions", b =>
-                {
-                    b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("CreatedBy")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

@@ -13,14 +13,14 @@ namespace VinhUni_Educator_API.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            SeedData(modelBuilder);
+            // SeedData(modelBuilder);
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
             base.OnConfiguring(optionsBuilder);
         }
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         public void SeedData(ModelBuilder modelBuilder)
         {
             ApplicationUser ExampleUser = new ApplicationUser
@@ -34,6 +34,7 @@ namespace VinhUni_Educator_API.Context
                 FirstName = "Nguyễn Ngọc Anh",
                 LastName = "Tuấn",
                 Address = "Vinh, Nghệ An",
+                USmartId = 78592,
                 CreatedAt = DateTime.UtcNow,
                 DateOfBirth = new DateOnly(2002, 07, 02),
                 PhoneNumber = "0123456789"
@@ -55,5 +56,9 @@ namespace VinhUni_Educator_API.Context
             modelBuilder.Entity<IdentityRole>().HasData(ExampleRole);
             modelBuilder.Entity<IdentityUserRole<string>>().HasData(UserRole);
         }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<USmartToken> USmartTokens { get; set; }
+        public DbSet<Organization> Organizations { get; set; }
+        public DbSet<SyncAction> SyncActions { get; set; }
     }
 }
