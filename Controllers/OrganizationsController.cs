@@ -17,7 +17,7 @@ namespace VinhUni_Educator_API.Controllers
             _organizationServices = organizationServices;
         }
         [HttpGet]
-        [Route("sync-organizations")]
+        [Route("sync")]
         [SwaggerOperation(Summary = "Đồng bộ danh sách phòng, ban", Description = "Đồng bộ danh sách phòng ban từ hệ thống Đại học Vinh")]
         public async Task<IActionResult> SyncOrganizations()
         {

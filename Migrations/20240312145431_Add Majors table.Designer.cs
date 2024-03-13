@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -11,9 +12,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240312145431_Add Majors table")]
+    partial class AddMajorstable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -260,14 +263,21 @@ namespace VinhUni_Educator_API.Migrations
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("CreatedBy")
+                    b.Property<string>("CreatedById")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CreatorId")
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DeletedBy")
+                    b.Property<string>("DeletedById")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DeletedId")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
@@ -283,15 +293,17 @@ namespace VinhUni_Educator_API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<float?>("MaxTrainingYears")
-                        .HasColumnType("real");
+                    b.Property<int?>("MaxTrainingYears")
+                        .HasColumnType("integer");
 
-                    b.Property<float?>("MinTrainingYears")
-                        .HasColumnType("real");
+                    b.Property<int?>("MinTrainingYears")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
+                    b.HasIndex("CreatorId");
+
+                    b.HasIndex("DeletedId");
 
                     b.ToTable("Majors");
                 });
@@ -483,13 +495,17 @@ namespace VinhUni_Educator_API.Migrations
 
             modelBuilder.Entity("VinhUni_Educator_API.Entities.Major", b =>
                 {
-                    b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "User")
+                    b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "Creator")
                         .WithMany()
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("CreatorId");
 
-                    b.Navigation("User");
+                    b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "Deleted")
+                        .WithMany()
+                        .HasForeignKey("DeletedId");
+
+                    b.Navigation("Creator");
+
+                    b.Navigation("Deleted");
                 });
 
             modelBuilder.Entity("VinhUni_Educator_API.Entities.Organization", b =>

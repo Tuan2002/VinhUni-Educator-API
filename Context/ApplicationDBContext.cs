@@ -60,5 +60,6 @@ namespace VinhUni_Educator_API.Context
         public DbSet<USmartToken> USmartTokens { get; set; }
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<SyncAction> SyncActions { get; set; }
+        public DbSet<Major> Majors { get; set; }
     }
 }

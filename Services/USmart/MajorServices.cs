@@ -1,27 +1,25 @@
-using System.Net;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
-using RestSharp.Authenticators;
 using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
 using VinhUni_Educator_API.Interfaces;
-using VinhUni_Educator_API.Models.USmart;
+using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Utils;
 
 namespace VinhUni_Educator_API.Services
 {
-    public class OrganizationServices : IOrganizationServices
+    public class MajorServices : IMajorServices
     {
         private readonly ApplicationDBContext _context;
         private readonly IConfiguration _config;
         private readonly ILogger<OrganizationServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public OrganizationServices(ApplicationDBContext context, IConfiguration config, ILogger<OrganizationServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        public MajorServices(ApplicationDBContext context, IConfiguration config, ILogger<OrganizationServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;
@@ -29,8 +27,7 @@ namespace VinhUni_Educator_API.Services
             _logger = logger;
             _jwtServices = jwtServices;
         }
-
-        public async Task<ActionResponse> SyncOrganizationsAsync()
+        public async Task<ActionResponse> SyncMajorAsync()
         {
             var APIBaseURL = _config["VinhUNISmart:API"];
             if (string.IsNullOrEmpty(APIBaseURL))
@@ -45,7 +42,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 // Check if the last sync action is within 30 minutes
-                var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncOrganization);
+                var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncMajor);
                 if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
                 {
                     var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
@@ -78,9 +75,25 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var fetch = new FetchData(APIBaseURL, uSmartToken.Token);
-                var responseData = await fetch.FetchAsync("gwsg/organizationmanagement/Organization/GetByParentCode", Method.Get);
-                List<OrganizationSyncModel> listOrganization = JsonSerializer.Deserialize<List<OrganizationSyncModel>>(responseData?.data?.ToString());
-                if (responseData?.success == false || listOrganization is null)
+                var formBody = @"{
+                                ""pageInfo"": {
+                                    ""page"": 1,
+                                    ""pageSize"": 1000
+                                },
+                                ""sorts"": [],
+                                ""filters"": [
+                                    {
+                                        ""filters"": [],
+                                        ""field"": ""idTrinhDoDaoTao"",
+                                        ""operator"": ""eq"",
+                                        ""value"": 5 // Đại học
+                                    }
+                                ],
+                                ""fields"": ""id,nganH_Ma,nganH_Ten,nganH_ThoiGianToiThieu,nganH_ThoiGianToiDa""
+                                }";
+                var responseData = await fetch.FetchAsync("gwsg/dbdaotao_chinhquy/tbl_DM_NguoiHoc_Nganh/getPaged", null, formBody, Method.Post);
+                List<MajorSyncModel> listMajor = JsonSerializer.Deserialize<List<MajorSyncModel>>(responseData?.data?.ToString());
+                if (responseData?.success == false || listMajor is null)
                 {
                     return new ActionResponse
                     {
@@ -89,22 +102,25 @@ namespace VinhUni_Educator_API.Services
                         Message = "Error occurred while getting organizations from USmart API"
                     };
                 }
-                // Update or insert organizations to database
-                int countNewOrganization = 0;
-                foreach (var org in listOrganization)
+                // Update or insert majors to database
+                int countNewMajor = 0;
+                foreach (var org in listMajor)
                 {
-                    var organization = await _context.Organizations.FirstOrDefaultAsync(o => o.OrganizationCode == org.id);
-                    if (organization is null)
+                    var major = await _context.Majors.FirstOrDefaultAsync(o => o.MajorId == org.id);
+                    if (major is null)
                     {
-                        organization = new Organization
+                        major = new Major
                         {
-                            OrganizationCode = org.id,
-                            OrganizationName = org.name,
+                            MajorId = org.id,
+                            MajorCode = org.nganH_Ma,
+                            MajorName = org.nganH_Ten,
+                            MinTrainingYears = org.nganH_ThoiGianToiThieu,
+                            MaxTrainingYears = org.nganH_ThoiGianToiDa,
                             CreatedBy = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
-                        await _context.Organizations.AddAsync(organization);
-                        countNewOrganization++;
+                        await _context.Majors.AddAsync(major);
+                        countNewMajor++;
                     }
                 }
                 // Log sync action
@@ -114,16 +130,16 @@ namespace VinhUni_Educator_API.Services
                     SyncAt = DateTime.UtcNow,
                     CreatedBy = userId,
                     Status = true,
-                    Message = $"Đã cập nhật thêm {countNewOrganization} đơn vị mới vào lúc: {DateTime.UtcNow}",
+                    Message = $"Đã cập nhật thêm {countNewMajor} ngành đào tạo mới vào lúc: {DateTime.UtcNow}",
                 };
                 await _context.SyncActions.AddAsync(newSyncAction);
                 _context.SaveChanges();
-                var message = countNewOrganization > 0 ? $"Đã cập nhật thêm {countNewOrganization} đơn vị mới" : "Không có đơn vị nào mới";
+                var message = countNewMajor > 0 ? $"Đã cập nhật thêm {countNewMajor} đơn vị mới" : "Không có đơn vị nào mới";
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Message = message,
+                    Message = "Cập nhật danh sách ngành học thành công",
                 };
             }
             catch (Exception e)

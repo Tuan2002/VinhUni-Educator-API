@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -11,9 +12,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240312150816_Update Majors table")]
+    partial class UpdateMajorstable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -268,6 +271,7 @@ namespace VinhUni_Educator_API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DeletedBy")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<bool>("IsDeleted")
@@ -283,11 +287,11 @@ namespace VinhUni_Educator_API.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<float?>("MaxTrainingYears")
-                        .HasColumnType("real");
+                    b.Property<int?>("MaxTrainingYears")
+                        .HasColumnType("integer");
 
-                    b.Property<float?>("MinTrainingYears")
-                        .HasColumnType("real");
+                    b.Property<int?>("MinTrainingYears")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

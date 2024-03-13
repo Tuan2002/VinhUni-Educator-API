@@ -87,7 +87,7 @@ builder.Services.AddAuthentication(options =>
 });
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddHttpClient();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -106,6 +106,7 @@ builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IJwtServices, JwtServices>();
 builder.Services.AddScoped<ICacheServices, CacheServices>();
 builder.Services.AddScoped<IOrganizationServices, OrganizationServices>();
+builder.Services.AddScoped<IMajorServices, MajorServices>();
 
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
