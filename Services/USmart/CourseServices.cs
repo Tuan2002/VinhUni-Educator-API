@@ -1,3 +1,4 @@
+
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -7,19 +8,19 @@ using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
 using VinhUni_Educator_API.Interfaces;
-using VinhUni_Educator_API.Models;
+using VinhUni_Educator_API.Models.USmart;
 using VinhUni_Educator_API.Utils;
 
 namespace VinhUni_Educator_API.Services
 {
-    public class MajorServices : IMajorServices
+    public class CourseServices : ICourseServices
     {
         private readonly ApplicationDBContext _context;
         private readonly IConfiguration _config;
         private readonly ILogger<OrganizationServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public MajorServices(ApplicationDBContext context, IConfiguration config, ILogger<OrganizationServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        public CourseServices(ApplicationDBContext context, IConfiguration config, ILogger<OrganizationServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;
@@ -27,7 +28,7 @@ namespace VinhUni_Educator_API.Services
             _logger = logger;
             _jwtServices = jwtServices;
         }
-        public async Task<ActionResponse> SyncMajorAsync()
+        public async Task<ActionResponse> SyncCoursesAsync()
         {
             var APIBaseURL = _config["VinhUNISmart:API"];
             if (string.IsNullOrEmpty(APIBaseURL))
@@ -41,8 +42,8 @@ namespace VinhUni_Educator_API.Services
             }
             try
             {
-                // Check if the last sync action is within 30 minutes
-                var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncMajor);
+                //Check if the last sync action is within 30 minutes
+                var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncCourse);
                 if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
                 {
                     var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
@@ -84,57 +85,61 @@ namespace VinhUni_Educator_API.Services
                                 ""filters"": [
                                     {
                                         ""filters"": [],
-                                        ""field"": ""idTrinhDoDaoTao"",
+                                        ""field"": ""idHe"",
                                         ""operator"": ""eq"",
-                                        ""value"": 5 // Đại học
+                                        ""value"": 1 // Đại học chính quy
                                     }
                                 ],
-                                ""fields"": ""id,nganH_Ma,nganH_Ten,nganH_ThoiGianToiThieu,nganH_ThoiGianToiDa""
+                                ""sorts"": [
+                                    {
+                                        ""field"": ""ten"",
+                                        ""dir"": 1
+                                    }
+                                ]
                                 }";
-                var responseData = await fetch.FetchAsync("gwsg/dbdaotao_chinhquy/tbl_DM_NguoiHoc_Nganh/getPaged", null, formBody, Method.Post);
-                List<MajorSyncModel> listMajor = JsonSerializer.Deserialize<List<MajorSyncModel>>(responseData?.data?.ToString());
-                if (responseData?.success == false || listMajor is null)
+                var responseData = await fetch.FetchAsync("gwsg/dbdaotao_chinhquy/tbl_DM_KhoaHoc/getPaged", null, formBody, Method.Post);
+                List<CourseSyncModel> listCourse = JsonSerializer.Deserialize<List<CourseSyncModel>>(responseData?.data?.ToString());
+                if (responseData?.success == false || listCourse is null)
                 {
                     return new ActionResponse
                     {
                         StatusCode = 500,
                         IsSuccess = false,
-                        Message = "Error occurred while getting majors from USmart API"
+                        Message = "Error occurred while getting courses from USmart API"
                     };
                 }
-                // Update or insert majors to database
-                int countNewMajor = 0;
-                foreach (var item in listMajor)
+                // Update or insert training course to database
+                int countNewCourse = 0;
+                foreach (var item in listCourse)
                 {
-                    var major = await _context.Majors.FirstOrDefaultAsync(o => o.MajorId == item.id);
-                    if (major is null)
+                    var course = await _context.Courses.FirstOrDefaultAsync(o => o.CourseId == item.id);
+                    if (course is null)
                     {
-                        major = new Major
+                        course = new Course
                         {
-                            MajorId = item.id,
-                            MajorCode = item.nganH_Ma,
-                            MajorName = item.nganH_Ten,
-                            MinTrainingYears = item.nganH_ThoiGianToiThieu,
-                            MaxTrainingYears = item.nganH_ThoiGianToiDa,
+                            CourseId = item.id,
+                            CourseCode = item.code,
+                            CourseName = item.ten,
+                            StartYear = item.namBatDau,
                             CreatedBy = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
-                        await _context.Majors.AddAsync(major);
-                        countNewMajor++;
+                        await _context.Courses.AddAsync(course);
+                        countNewCourse++;
                     }
                 }
                 // Log sync action
                 var newSyncAction = new SyncAction
                 {
-                    ActionName = SyncActionList.SyncMajor,
+                    ActionName = SyncActionList.SyncCourse,
                     SyncAt = DateTime.UtcNow,
                     CreatedBy = userId,
                     Status = true,
-                    Message = $"Đã cập nhật thêm {countNewMajor} ngành học mới vào lúc: {DateTime.UtcNow}",
+                    Message = $"Đã cập nhật thêm {countNewCourse} ngành đào tạo mới vào lúc: {DateTime.UtcNow}",
                 };
                 await _context.SyncActions.AddAsync(newSyncAction);
                 _context.SaveChanges();
-                var message = countNewMajor > 0 ? $"Đã cập nhật thêm {countNewMajor} ngành học mới mới" : "Không có ngành học nào mới";
+                var message = countNewCourse > 0 ? $"Đã cập nhật thêm {countNewCourse} khoá đào tạo mới" : "Không có khoá đào tạo nào mới";
                 return new ActionResponse
                 {
                     StatusCode = 200,
@@ -144,12 +149,12 @@ namespace VinhUni_Educator_API.Services
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while syncing majors: {e.Message} at {DateTime.UtcNow}");
+                _logger.LogError($"Error occurred while syncing courses: {e.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Error occurred while syncing majors, please try again later or contact administrator"
+                    Message = "Error occurred while syncing courses, please try again later or contact administrator"
                 };
             }
         }

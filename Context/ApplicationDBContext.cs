@@ -61,5 +61,6 @@ namespace VinhUni_Educator_API.Context
         public DbSet<Organization> Organizations { get; set; }
         public DbSet<SyncAction> SyncActions { get; set; }
         public DbSet<Major> Majors { get; set; }
+        public DbSet<Course> Courses { get; set; }
     }
 }
