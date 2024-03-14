@@ -39,7 +39,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Cannot find USmart API base URL in configuration"
+                    Message = "Không thể tìm thấy địa chỉ API của hệ thống USmart trong cấu hình"
                 };
             }
             try
@@ -59,12 +59,12 @@ namespace VinhUni_Educator_API.Services
                 var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (string.IsNullOrEmpty(userId))
                 {
-                    throw new Exception("Cannot find user id in context");
+                    throw new Exception("Không thể xác định người dùng");
                 }
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
                 if (user == null)
                 {
-                    throw new Exception("Cannot find user in database");
+                    throw new Exception("Không thể xác định người dùng");
                 }
                 var uSmartToken = await _context.USmartTokens.FirstOrDefaultAsync(t => t.UserId == userId);
                 var isTokenExpired = _jwtServices.IsTokenExpired(uSmartToken?.Token);
@@ -72,9 +72,9 @@ namespace VinhUni_Educator_API.Services
                 {
                     return new ActionResponse
                     {
-                        StatusCode = 401,
+                        StatusCode = 403,
                         IsSuccess = false,
-                        Message = "User has not been authorized to use USmart API"
+                        Message = "Bạn không có quyền truy cập hệ thống USmart, vui lòng đăng nhập lại bằng tài khoản USmart"
                     };
                 }
                 var fetch = new FetchData(APIBaseURL, uSmartToken.Token);
@@ -86,7 +86,7 @@ namespace VinhUni_Educator_API.Services
                     {
                         StatusCode = 500,
                         IsSuccess = false,
-                        Message = "Error occurred while getting organizations from USmart API"
+                        Message = "Có lỗi xảy ra khi lấy danh sách đơn vị từ hệ thống USmart"
                     };
                 }
                 // Update or insert organizations to database
@@ -133,7 +133,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Error occurred while syncing organizations, please try again later or contact administrator"
+                    Message = "Có lỗi xảy ra khi đồng bộ danh sách đơn vị từ hệ thống USmart, vui lòng thử lại sau"
                 };
             }
         }
