@@ -17,7 +17,8 @@ namespace VinhUni_Educator_API.Controllers
             _majorServices = majorServices;
         }
 
-        [HttpGet("sync")]
+        [HttpPost]
+        [Route("sync")]
         [SwaggerOperation(Summary = "Đồng bộ danh sách ngành học", Description = "Đồng bộ danh sách ngành học từ hệ thống Đại học Vinh")]
         public async Task<IActionResult> SyncMajorAsync()
         {

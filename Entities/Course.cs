@@ -9,6 +9,7 @@ namespace VinhUni_Educator_API.Entities
         public string CourseName { get; set; } = null!;
         public int StartYear { get; set; }
         public string CreatedBy { get; set; } = null!;
+        public virtual ApplicationUser User { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }

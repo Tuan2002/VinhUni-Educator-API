@@ -1,3 +1,4 @@
+
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -7,19 +8,19 @@ using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
 using VinhUni_Educator_API.Interfaces;
-using VinhUni_Educator_API.Models.USmart;
+using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Utils;
 
 namespace VinhUni_Educator_API.Services
 {
-    public class CourseServices : ICourseServices
+    public class ProgramServices : IProgramServices
     {
         private readonly ApplicationDBContext _context;
         private readonly IConfiguration _config;
-        private readonly ILogger<CourseServices> _logger;
+        private readonly ILogger<ProgramServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public CourseServices(ApplicationDBContext context, IConfiguration config, ILogger<CourseServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        public ProgramServices(ApplicationDBContext context, IConfiguration config, ILogger<ProgramServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;
@@ -27,7 +28,7 @@ namespace VinhUni_Educator_API.Services
             _logger = logger;
             _jwtServices = jwtServices;
         }
-        public async Task<ActionResponse> SyncCoursesAsync()
+        public async Task<ActionResponse> SyncProgramsAsync()
         {
             var APIBaseURL = _config["VinhUNISmart:API"];
             if (string.IsNullOrEmpty(APIBaseURL))
@@ -42,7 +43,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 //Check if the last sync action is within 30 minutes
-                var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncCourse);
+                var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncTrain);
                 if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
                 {
                     var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
@@ -91,71 +92,86 @@ namespace VinhUni_Educator_API.Services
                                 ],
                                 ""sorts"": [
                                     {
-                                        ""field"": ""ten"",
-                                        ""dir"": 1
+                                        ""field"": ""created"",
+                                        ""dir"": -1
                                     }
                                 ]
                                 }";
-                var responseData = await fetch.FetchAsync("gwsg/dbdaotao_chinhquy/tbl_DM_KhoaHoc/getPaged", null, formBody, Method.Post);
-                List<CourseSyncModel> listCourse = JsonSerializer.Deserialize<List<CourseSyncModel>>(responseData?.data?.ToString());
-                if (responseData?.success == false || listCourse is null)
+                var responseData = await fetch.FetchAsync("gwsg/dbdaotao_chinhquy/tbl_ChuongTrinhDaoTao/getPaged", null, formBody, Method.Post);
+                List<ProgramSyncModel> listProgram = JsonSerializer.Deserialize<List<ProgramSyncModel>>(responseData?.data?.ToString());
+                if (responseData?.success == false || listProgram is null)
                 {
                     return new ActionResponse
                     {
                         StatusCode = 500,
                         IsSuccess = false,
-                        Message = "Có lỗi xảy ra khi lấy danh sách khoá đào tạo từ hệ thống USmart"
+                        Message = "Có lỗi xảy ra khi lấy danh sách chương trình đào tạo từ hệ thống USmart"
                     };
                 }
-                // Update or insert training course to database
-                int countNewCourse = 0;
-                foreach (var item in listCourse)
+                // Update or insert training program to database
+                int countNewProgram = 0;
+                int countFailed = 0;
+                await _context.Database.BeginTransactionAsync();
+                foreach (var item in listProgram)
                 {
-                    var course = await _context.Courses.FirstOrDefaultAsync(o => o.CourseId == item.id);
-                    if (course is null)
+                    var course = await _context.Courses.FirstOrDefaultAsync(o => o.CourseId == item.idKhoaHoc);
+                    var major = await _context.Majors.FirstOrDefaultAsync(o => o.MajorId == item.idNganh);
+                    var program = await _context.TrainingPrograms.FirstOrDefaultAsync(o => o.ProgramId == item.id);
+                    if (program is null && major != null && course != null)
                     {
-                        course = new Course
+                        program = new TrainingProgram
                         {
-                            CourseId = item.id,
-                            CourseCode = item.code,
-                            CourseName = item.ten,
+                            ProgramId = item.id,
+                            ProgramCode = item.code,
+                            ProgramName = item.ten,
+                            MajorId = major.Id,
+                            CourseId = course.Id,
+                            CreditHours = item.soTinChi,
                             StartYear = item.namBatDau,
+                            TrainingYears = item.soNamDaoTao,
+                            MaxTrainingYears = item.soNamDaoTaoToiDa,
                             CreatedBy = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
-                        await _context.Courses.AddAsync(course);
-                        countNewCourse++;
+                        await _context.TrainingPrograms.AddAsync(program);
+                        countNewProgram++;
                     }
+                    if (major is null || course is null)
+                        countFailed++;
                 }
+                await _context.SaveChangesAsync();
+                await _context.Database.CommitTransactionAsync();
                 // Log sync action
                 var newSyncAction = new SyncAction
                 {
-                    ActionName = SyncActionList.SyncCourse,
+                    ActionName = SyncActionList.SyncTrain,
                     SyncAt = DateTime.UtcNow,
                     CreatedBy = userId,
                     Status = true,
-                    Message = $"Đã cập nhật thêm {countNewCourse} khoá đào tạo mới vào lúc: {DateTime.UtcNow}",
+                    Message = $"Đã cập nhật thêm {countNewProgram} chương trình đào tạo mới vào lúc: {DateTime.UtcNow}",
                 };
                 await _context.SyncActions.AddAsync(newSyncAction);
                 _context.SaveChanges();
-                var message = countNewCourse > 0 ? $"Đã cập nhật thêm {countNewCourse} khoá đào tạo mới" : "Không có khoá đào tạo nào mới";
+                var message = countNewProgram > 0 ? $"Đã cập nhật thêm {countNewProgram} chương trình đào tạo mới và {countFailed} chưa được cập nhật" : "Không có chương trình đào tạo nào mới";
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Message = message
+                    Message = message,
                 };
             }
             catch (Exception e)
             {
-                _logger.LogError($"Error occurred while syncing courses: {e.Message} at {DateTime.UtcNow}");
+                await _context.Database.RollbackTransactionAsync();
+                _logger.LogError($"Error occurred while syncing training: {e.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Có lỗi xảy ra khi đồng bộ khoá đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                    Message = "Có lỗi xảy ra khi đồng bộ chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
                 };
             }
         }
+
     }
 }

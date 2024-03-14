@@ -108,7 +108,7 @@ builder.Services.AddScoped<ICacheServices, CacheServices>();
 builder.Services.AddScoped<IOrganizationServices, OrganizationServices>();
 builder.Services.AddScoped<IMajorServices, MajorServices>();
 builder.Services.AddScoped<ICourseServices, CourseServices>();
-
+builder.Services.AddScoped<IProgramServices, ProgramServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {
