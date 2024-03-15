@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -11,9 +12,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240315103922_Add Students and Teachers table table")]
+    partial class AddStudentsandTeacherstabletable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -490,6 +493,7 @@ namespace VinhUni_Educator_API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedById")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -498,25 +502,11 @@ namespace VinhUni_Educator_API.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
 
-                    b.Property<DateOnly?>("Dob")
-                        .HasColumnType("date");
-
-                    b.Property<string>("FirstName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Gender")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsSynced")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<int?>("ProgramId")
                         .HasColumnType("integer");
@@ -597,6 +587,7 @@ namespace VinhUni_Educator_API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CreatedById")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime?>("DeletedAt")
@@ -605,24 +596,11 @@ namespace VinhUni_Educator_API.Migrations
                     b.Property<string>("DeletedBy")
                         .HasColumnType("text");
 
-                    b.Property<DateOnly?>("Dob")
-                        .HasColumnType("date");
-
-                    b.Property<string>("FirstName")
-                        .HasColumnType("text");
-
-                    b.Property<int?>("Gender")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsSynced")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("LastName")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<int?>("OrganizationId")
                         .HasColumnType("integer");
@@ -873,7 +851,9 @@ namespace VinhUni_Educator_API.Migrations
 
                     b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("VinhUni_Educator_API.Entities.TrainingProgram", "TrainingProgram")
                         .WithMany()
@@ -911,7 +891,9 @@ namespace VinhUni_Educator_API.Migrations
                 {
                     b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById");
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("VinhUni_Educator_API.Entities.Organization", "Organization")
                         .WithMany()

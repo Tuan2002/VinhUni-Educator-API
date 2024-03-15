@@ -16,10 +16,10 @@ namespace VinhUni_Educator_API.Services
     {
         private readonly ApplicationDBContext _context;
         private readonly IConfiguration _config;
-        private readonly ILogger<OrganizationServices> _logger;
+        private readonly ILogger<MajorServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public MajorServices(ApplicationDBContext context, IConfiguration config, ILogger<OrganizationServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        public MajorServices(ApplicationDBContext context, IConfiguration config, ILogger<MajorServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;

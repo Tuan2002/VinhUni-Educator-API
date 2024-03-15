@@ -1,11 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
+using System.Text.Json;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
-using RestSharp.Authenticators;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
@@ -25,8 +25,9 @@ namespace VinhUni_Educator_API.Services
         private readonly IConfiguration _configuration;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly ICacheServices _cacheServices;
+        private readonly IUserServices _userServices;
         private readonly IMapper _mapper;
-        public AuthServices(ILogger<AuthServices> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDBContext context, IJwtServices jwtServices, IHttpContextAccessor httpContextAccessor, ICacheServices cacheServices, IMapper mapper)
+        public AuthServices(ILogger<AuthServices> logger, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, ApplicationDBContext context, IJwtServices jwtServices, IHttpContextAccessor httpContextAccessor, ICacheServices cacheServices, IMapper mapper, IUserServices userServices)
         {
             _logger = logger;
             _userManager = userManager;
@@ -37,6 +38,7 @@ namespace VinhUni_Educator_API.Services
             _cacheServices = cacheServices;
             _mapper = mapper;
             _configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+            _userServices = userServices;
         }
         public async Task<ActionResponse> LoginAsync(LoginModel model)
         {
@@ -122,10 +124,173 @@ namespace VinhUni_Educator_API.Services
         }
         public async Task<ActionResponse> LoginSSOAsync(LoginModel model)
         {
-            var SSOBaseURL = _configuration["VinhUNISmart:SSO"];
-            var APIBaseURL = _configuration["VinhUNISmart:API"];
-            if (string.IsNullOrEmpty(SSOBaseURL) || string.IsNullOrEmpty(APIBaseURL))
+            try
             {
+                var SSOBaseURL = _configuration["VinhUNISmart:SSO"];
+                var APIBaseURL = _configuration["VinhUNISmart:API"];
+                if (string.IsNullOrEmpty(SSOBaseURL) || string.IsNullOrEmpty(APIBaseURL))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 500,
+                        IsSuccess = false,
+                        Message = "Lỗi máy chủ, vui lòng thử lại sau"
+                    };
+                }
+                // Start login process with SSO
+                var cookieContainer = new CookieContainer();
+                var SSOClient = new RestClient(new RestClientOptions(SSOBaseURL) { FollowRedirects = false, CookieContainer = cookieContainer });
+                SSOClient.AddDefaultHeader("Accept", "*/*");
+                SSOClient.AddDefaultHeader("Accept-Encoding", "gzip, deflate, br");
+                var loginRequest = new RestRequest("Account/Login");
+                var parameters = new
+                {
+                    ReturnUrl = @"/connect/authorize/callback?response_type=id_token%20token&client_id=e-university&state=gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO&redirect_uri=https%3A%2F%2Fusmart.vinhuni.edu.vn&scope=openid%20profile%20email&nonce=gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO",
+                    FromApp = "False",
+                    model.UserName,
+                    model.Password,
+                    button = "login",
+                    __RequestVerification = "CfDJ8HRX9aXUghNMsXnm0Zl5yNgTEGa8hbYNa7ePwwXIzNiI3hWh2uuv6nQDhW2RZzBcQ7UR1M9UXWJShJdWHlTFkDRL585ECRpkpHq2AvadtGWJjqTNDh79OmkMBHyWvZyCeWJkyI-I3wMzhbh629j3KIg",
+
+                };
+                loginRequest.AddObject(parameters);
+                var loginResponse = await SSOClient.ExecutePostAsync(loginRequest);
+                var cookies = loginResponse.Cookies;
+                if ((int)loginResponse.StatusCode != 302)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = (int)loginResponse.StatusCode,
+                        IsSuccess = false,
+                        Message = "Lỗi xác thực, vui lòng thử lại"
+                    };
+                }
+                var getTokenRequest = new RestRequest("connect/authorize/callback");
+                getTokenRequest.AddQueryParameter("response_type", "id_token token");
+                getTokenRequest.AddQueryParameter("client_id", "e-university");
+                getTokenRequest.AddQueryParameter("state", "gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO");
+                getTokenRequest.AddQueryParameter("redirect_uri", "https://usmart.vinhuni.edu.vn");
+                getTokenRequest.AddQueryParameter("scope", "openid profile email");
+                getTokenRequest.AddQueryParameter("nonce", "gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO");
+                var getTokenResponse = await SSOClient.ExecuteGetAsync(getTokenRequest);
+                var location = getTokenResponse.Headers?.FirstOrDefault(x => x.Name == "Location")?.Value?.ToString();
+                var URLParser = new URLParser();
+                var fragments = URLParser.ParseFragments(location);
+                if (fragments == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = (int)getTokenResponse.StatusCode,
+                        IsSuccess = false,
+                        Message = "Lỗi xác thực, vui lòng thử lại"
+                    };
+                }
+                var uSmartAccessToken = fragments.access_token;
+                List<Claim> claims = _jwtServices.GetTokenClaims(uSmartAccessToken);
+                string? smartUserId = claims?.FirstOrDefault(c => c.Type == "userid")?.Value.ToString();
+                if (string.IsNullOrEmpty(smartUserId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 500,
+                        IsSuccess = false,
+                        Message = "Lỗi xác thực, vui lòng thử lại"
+                    };
+                }
+                var user = _context.Users.Where(user => user.USmartId == int.Parse(smartUserId)).FirstOrDefault();
+                if (user == null)
+                {
+                    var createResponse = await _userServices.SyncUserFromSSO(uSmartAccessToken);
+                    if (!createResponse.IsSuccess)
+                    {
+                        return new ActionResponse
+                        {
+                            StatusCode = createResponse.StatusCode,
+                            IsSuccess = false,
+                            Message = createResponse.Message
+                        };
+                    }
+                    user = _context.Users.Where(user => user.USmartId == int.Parse(smartUserId)).FirstOrDefault();
+                }
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 500,
+                        IsSuccess = false,
+                        Message = "Lỗi máy chủ, vui lòng thử lại sau"
+                    };
+                }
+
+                var userRoles = await _userManager.GetRolesAsync(user);
+                var tokenClaims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id),
+                    new Claim(ClaimTypes.Name, user.UserName ?? ""),
+                    new Claim(type: "LastName", user.LastName ?? ""),
+                    new Claim(type: "FirstName", user.FirstName ?? ""),
+                };
+                tokenClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                var accessTokenResponse = _jwtServices.GenerateAccessToken(tokenClaims);
+                var refreshTokenResponse = _jwtServices.GenerateRefreshToken(tokenClaims);
+                if (accessTokenResponse == null || refreshTokenResponse == null)
+                {
+                    throw new InvalidOperationException("Token or Refresh Token invalid.");
+                }
+                var userRefreshToken = new RefreshToken
+                {
+                    JwtId = refreshTokenResponse.TokenId,
+                    Token = refreshTokenResponse.Token,
+                    DateAdded = DateTime.UtcNow,
+                    DateExpire = refreshTokenResponse.Expiration,
+                    IsUsed = false,
+                    IsRevoked = false,
+                    UserId = user.Id
+                };
+                var uSmartToken = _context.USmartTokens.Where(ut => ut.UserId == user.Id).FirstOrDefault();
+                if (uSmartToken != null)
+                {
+                    uSmartToken.Token = uSmartAccessToken;
+                    uSmartToken.ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken);
+                    uSmartToken.IsExpired = false;
+                    _context.USmartTokens.Update(uSmartToken);
+                }
+                else
+                {
+                    uSmartToken = new USmartToken
+                    {
+                        Token = uSmartAccessToken,
+                        UserId = user.Id,
+                        ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken),
+                        IsExpired = false
+                    };
+                    _context.USmartTokens.Add(uSmartToken);
+                }
+                var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(refreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(refreshTokenResponse.Expiration));
+                _context.RefreshTokens.Add(userRefreshToken);
+                _context.SaveChanges();
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshTokenResponse.Token, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None,
+                    Expires = refreshTokenResponse.Expiration
+                });
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Đăng nhập thành công",
+                    Data = new
+                    {
+                        accessToken = accessTokenResponse.Token,
+                        refreshToken = refreshTokenResponse.Token
+                    }
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while logging in: {e.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = 500,
@@ -133,140 +298,6 @@ namespace VinhUni_Educator_API.Services
                     Message = "Lỗi máy chủ, vui lòng thử lại sau"
                 };
             }
-            var cookieContainer = new CookieContainer();
-            var SSOClient = new RestClient(new RestClientOptions(SSOBaseURL) { FollowRedirects = false, CookieContainer = cookieContainer });
-            SSOClient.AddDefaultHeader("Accept", "*/*");
-            SSOClient.AddDefaultHeader("Accept-Encoding", "gzip, deflate, br");
-            var loginRequest = new RestRequest("Account/Login");
-            var parameters = new
-            {
-                ReturnUrl = @"/connect/authorize/callback?response_type=id_token%20token&client_id=e-university&state=gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO&redirect_uri=https%3A%2F%2Fusmart.vinhuni.edu.vn&scope=openid%20profile%20email&nonce=gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO",
-                FromApp = "False",
-                model.UserName,
-                model.Password,
-                button = "login",
-                __RequestVerification = "CfDJ8HRX9aXUghNMsXnm0Zl5yNgTEGa8hbYNa7ePwwXIzNiI3hWh2uuv6nQDhW2RZzBcQ7UR1M9UXWJShJdWHlTFkDRL585ECRpkpHq2AvadtGWJjqTNDh79OmkMBHyWvZyCeWJkyI-I3wMzhbh629j3KIg",
-
-            };
-            loginRequest.AddObject(parameters);
-            var loginResponse = await SSOClient.ExecutePostAsync(loginRequest);
-            var cookies = loginResponse.Cookies;
-            if ((int)loginResponse.StatusCode != 302)
-            {
-                return new ActionResponse
-                {
-                    StatusCode = (int)loginResponse.StatusCode,
-                    IsSuccess = false,
-                    Message = "Lỗi xác thực, vui lòng thử lại"
-                };
-            }
-            var getTokenRequest = new RestRequest("connect/authorize/callback");
-            getTokenRequest.AddQueryParameter("response_type", "id_token token");
-            getTokenRequest.AddQueryParameter("client_id", "e-university");
-            getTokenRequest.AddQueryParameter("state", "gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO");
-            getTokenRequest.AddQueryParameter("redirect_uri", "https://usmart.vinhuni.edu.vn");
-            getTokenRequest.AddQueryParameter("scope", "openid profile email");
-            getTokenRequest.AddQueryParameter("nonce", "gUQBhuNvp96V1sPDRgKdmMmJUPykbVWtP1T7dELO");
-            var getTokenResponse = await SSOClient.ExecuteGetAsync(getTokenRequest);
-            var location = getTokenResponse.Headers?.FirstOrDefault(x => x.Name == "Location")?.Value?.ToString();
-            var URLParser = new URLParser();
-            var fragments = URLParser.ParseFragments(location);
-            if (fragments == null)
-            {
-                return new ActionResponse
-                {
-                    StatusCode = (int)getTokenResponse.StatusCode,
-                    IsSuccess = false,
-                    Message = "Lỗi xác thực, vui lòng thử lại"
-                };
-            }
-            var uSmartAccessToken = fragments.access_token;
-            List<Claim> claims = _jwtServices.GetTokenClaims(uSmartAccessToken);
-            string? userId = claims?.FirstOrDefault(c => c.Type == "userid")?.Value.ToString();
-            if (string.IsNullOrEmpty(userId))
-            {
-                return new ActionResponse
-                {
-                    StatusCode = 500,
-                    IsSuccess = false,
-                    Message = "Lỗi xác thực, vui lòng thử lại"
-                };
-            }
-            var user = _context.Users.Where(user => user.USmartId == int.Parse(userId)).FirstOrDefault();
-            if (user == null)
-            {
-                return new ActionResponse
-                {
-                    StatusCode = 404,
-                    IsSuccess = false,
-                    Message = "Tài khoản người dùng không tồn tại không tồn tại"
-                };
-            }
-            var userRoles = await _userManager.GetRolesAsync(user);
-            var tokenClaims = new List<Claim>
-            {
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName ?? ""),
-                new Claim(type: "LastName", user.LastName ?? ""),
-                new Claim(type: "FirstName", user.FirstName ?? ""),
-            };
-            tokenClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
-            var accessTokenResponse = _jwtServices.GenerateAccessToken(tokenClaims);
-            var refreshTokenResponse = _jwtServices.GenerateRefreshToken(tokenClaims);
-            if (accessTokenResponse == null || refreshTokenResponse == null)
-            {
-                throw new InvalidOperationException("Token or Refresh Token invalid.");
-            }
-            var userRefreshToken = new RefreshToken
-            {
-                JwtId = refreshTokenResponse.TokenId,
-                Token = refreshTokenResponse.Token,
-                DateAdded = DateTime.UtcNow,
-                DateExpire = refreshTokenResponse.Expiration,
-                IsUsed = false,
-                IsRevoked = false,
-                UserId = user.Id
-            };
-            var uSmartToken = _context.USmartTokens.Where(ut => ut.UserId == user.Id).FirstOrDefault();
-            if (uSmartToken != null)
-            {
-                uSmartToken.Token = uSmartAccessToken;
-                uSmartToken.ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken);
-                uSmartToken.IsExpired = false;
-                _context.USmartTokens.Update(uSmartToken);
-            }
-            else
-            {
-                uSmartToken = new USmartToken
-                {
-                    Token = uSmartAccessToken,
-                    UserId = user.Id,
-                    ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken),
-                    IsExpired = false
-                };
-                _context.USmartTokens.Add(uSmartToken);
-            }
-            var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(refreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(refreshTokenResponse.Expiration));
-            _context.RefreshTokens.Add(userRefreshToken);
-            _context.SaveChanges();
-            _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshTokenResponse.Token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
-                Expires = refreshTokenResponse.Expiration
-            });
-            return new ActionResponse
-            {
-                StatusCode = 200,
-                IsSuccess = true,
-                Message = "Đăng nhập thành công",
-                Data = new
-                {
-                    accessToken = accessTokenResponse.Token,
-                    refreshToken = refreshTokenResponse.Token
-                }
-            };
         }
         public async Task<ActionResponse> RefreshTokenAsync(string refreshToken)
         {
@@ -424,6 +455,5 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-
     }
 }

@@ -16,6 +16,7 @@ namespace VinhUni_Educator_API.Controllers
         {
             _organizationServices = organizationServices;
         }
+
         [HttpPost]
         [Route("sync")]
         [SwaggerOperation(Summary = "Đồng bộ danh sách đơn vị, phòng ban", Description = "Đồng bộ danh sách phòng ban từ hệ thống Đại học Vinh")]

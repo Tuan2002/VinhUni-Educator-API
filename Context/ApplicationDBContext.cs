@@ -64,5 +64,7 @@ namespace VinhUni_Educator_API.Context
         public DbSet<Course> Courses { get; set; }
         public DbSet<TrainingProgram> TrainingPrograms { get; set; }
         public DbSet<PrimaryClass> PrimaryClasses { get; set; }
+        public DbSet<Student> Students { get; set; }
+        public DbSet<Teacher> Teachers { get; set; }
     }
 }
