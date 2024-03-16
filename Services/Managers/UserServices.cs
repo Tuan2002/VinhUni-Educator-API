@@ -157,12 +157,11 @@ namespace VinhUni_Educator_API.Services
                         }
                         else
                         {
-                            student.StudentId = studentData.id;
-                            student.StudentCode = studentData.code;
                             student.FirstName = studentData.ho;
                             student.LastName = studentData.ten;
                             student.Gender = studentData.gioiTinh;
                             student.Dob = DateOnly.FromDateTime(studentData.ngaySinh);
+                            student.UserId = user.Id;
                             student.ClassId = primaryClass.Id;
                             student.ProgramId = program.Id;
                             student.CourseId = course.Id;

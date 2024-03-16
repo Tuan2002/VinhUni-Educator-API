@@ -14,8 +14,8 @@ namespace VinhUni_Educator_API.Entities
         public string? Gender { get; set; }
         public DateOnly? Dob { get; set; }
         [ForeignKey("User")]
-        public string UserId { get; set; } = null!;
-        public virtual ApplicationUser User { get; set; } = null!;
+        public string? UserId { get; set; } = null!;
+        public virtual ApplicationUser? User { get; set; } = null!;
         [ForeignKey("PrimaryClass")]
         public int? ClassId { get; set; }
         public virtual PrimaryClass? PrimaryClass { get; set; } = null!;
