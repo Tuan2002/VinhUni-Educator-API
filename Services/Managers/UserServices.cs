@@ -106,7 +106,7 @@ namespace VinhUni_Educator_API.Services
                             {
                                 StatusCode = 404,
                                 IsSuccess = false,
-                                Message = "Không thể xác minh thông tin người dùng"
+                                Message = "Không thể xác minh thông tin người học"
                             };
                         }
                         // Get student info from SSO Vinh Uni
@@ -169,6 +169,64 @@ namespace VinhUni_Educator_API.Services
                             _context.Students.Update(student);
                         }
                         break;
+                    case "2":
+                        // Teacher info
+                        var teacherCode = claims?.FirstOrDefault(c => c.Type == "maCanBo")?.Value.ToString();
+                        if (string.IsNullOrEmpty(teacherCode))
+                        {
+                            await _context.Database.RollbackTransactionAsync();
+                            return new ActionResponse
+                            {
+                                StatusCode = 404,
+                                IsSuccess = false,
+                                Message = "Không thể xác minh thông tin giáo viên"
+                            };
+                        }
+                        // Get teacher info from SSO Vinh Uni
+                        var fetchTeacherData = await fetch.FetchAsync($"gwsg/dbcanbo/tbl_CANBO_HoSo/GetByCode/{teacherCode}", Method.Get);
+                        if (fetchTeacherData?.success == false)
+                        {
+                            throw new Exception("Không thể lấy thông tin giáo viên từ máy chủ");
+                        }
+                        // Deserialize teacher info
+                        TeacherSyncModel teacherData = JsonSerializer.Deserialize<TeacherSyncModel>(fetchTeacherData?.data?.ToString()) ?? throw new Exception("Không nhận dạng được dữ liệu giáo viên");
+                        var organization = await _context.Organizations.FirstOrDefaultAsync(o => o.OrganizationCode == teacherData.dV_ID_GiangDay);
+                        // Check if teacher exists
+                        var teacher = _context.Teachers.FirstOrDefault(t => t.TeacherCode == teacherData.hS_ID);
+                        // Create or update teacher info
+                        if (teacher == null)
+                        {
+                            teacher = new Teacher
+                            {
+                                TeacherId = teacherData.id,
+                                TeacherCode = teacherData.hS_ID,
+                                FirstName = teacherData.hS_Ho,
+                                LastName = teacherData.hS_Ten,
+                                Gender = teacherData.hS_GioiTinh,
+                                Email = teacherData.hS_Email ?? user.Email,
+                                Dob = DateOnly.FromDateTime(teacherData.ngaySinh),
+                                UserId = user.Id,
+                                OrganizationId = organization?.Id,
+                                CreatedAt = DateTime.UtcNow,
+                                IsSynced = true,
+                                CreatedById = user.Id
+                            };
+                            await _context.Teachers.AddAsync(teacher);
+                        }
+                        else
+                        {
+                            teacher.FirstName = teacherData.hS_Ho;
+                            teacher.LastName = teacherData.hS_Ten;
+                            teacher.Gender = teacherData.hS_GioiTinh;
+                            teacher.Email = teacherData.hS_Email ?? user.Email;
+                            teacher.Dob = DateOnly.FromDateTime(teacherData.ngaySinh);
+                            teacher.UserId = user.Id;
+                            teacher.OrganizationId = organization?.Id;
+                            teacher.IsSynced = true;
+                            _context.Teachers.Update(teacher);
+                        }
+                        break;
+                    // Sync teacher info to local database
                     default:
                         break;
                 }

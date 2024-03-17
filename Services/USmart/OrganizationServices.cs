@@ -93,12 +93,13 @@ namespace VinhUni_Educator_API.Services
                 int countNewOrganization = 0;
                 foreach (var org in listOrganization)
                 {
-                    var organization = await _context.Organizations.FirstOrDefaultAsync(o => o.OrganizationCode == org.id);
+                    var organization = await _context.Organizations.FirstOrDefaultAsync(o => o.OrganizationId == org.id);
                     if (organization is null)
                     {
                         organization = new Organization
                         {
-                            OrganizationCode = org.id,
+                            OrganizationId = org.id,
+                            OrganizationCode = org.code,
                             OrganizationName = org.name,
                             CreatedBy = userId,
                             CreatedAt = DateTime.UtcNow,

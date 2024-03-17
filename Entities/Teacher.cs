@@ -12,10 +12,11 @@ namespace VinhUni_Educator_API.Entities
         public string? FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;
         public int? Gender { get; set; }
+        public string? Email { get; set; } = null!;
         public DateOnly? Dob { get; set; }
         [ForeignKey("User")]
-        public string UserId { get; set; } = null!;
-        public virtual ApplicationUser User { get; set; } = null!;
+        public string? UserId { get; set; } = null!;
+        public virtual ApplicationUser? User { get; set; } = null!;
         [ForeignKey("Organization")]
         public int? OrganizationId { get; set; }
         public virtual Organization? Organization { get; set; } = null!;
