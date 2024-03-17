@@ -111,7 +111,7 @@ builder.Services.AddScoped<ICourseServices, CourseServices>();
 builder.Services.AddScoped<IProgramServices, ProgramServices>();
 builder.Services.AddScoped<IPrimaryClassServices, PrimaryClassServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
-// builder.Services.AddScoped<IAccountServices, AccountServices>();
+builder.Services.AddScoped<IAccountServices, AccountServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {

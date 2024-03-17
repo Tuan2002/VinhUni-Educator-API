@@ -92,32 +92,6 @@ namespace VinhUni_Educator_API.Controllers
                 });
             }
         }
-        [HttpGet]
-        [Route("me")]
-        [Authorize]
-        [SwaggerOperation(Summary = "Lấy thông tin người dùng", Description = "Lấy thông tin người dùng hiện tại")]
-        public async Task<IActionResult> GetCurrentUser()
-        {
-            try
-            {
-                var response = await _authServices.GetCurrentUserAsync();
-                if (!response.IsSuccess)
-                {
-                    throw new Exception(response.Message);
-                }
-                return Ok(response);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error occurred while getting current user: {e.Message} at {DateTime.UtcNow}");
-                return StatusCode(500, new ActionResponse
-                {
-                    StatusCode = 500,
-                    IsSuccess = false,
-                    Message = "Error occurred while getting current user, please try again later or contact administrator"
-                });
-            }
-        }
         [HttpPost]
         [Route("refresh-token")]
         [SwaggerOperation(Summary = "Lấy access-token mới", Description = "Lấy access-token khi token đã hết hạn")]
