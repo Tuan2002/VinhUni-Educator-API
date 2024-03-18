@@ -66,6 +66,40 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _accountServices.ChangePasswordAsync(model);
             return StatusCode(response.StatusCode, response);
         }
-
+        [HttpPost]
+        [Route("forgot-password")]
+        [SwaggerOperation(Summary = "Quên mật khẩu", Description = "Gửi mã OTP để đổi mật khẩu")]
+        public async Task<IActionResult> ForgotPassword(string email)
+        {
+            var response = await _accountServices.ForgotPasswordAsync(email);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPost]
+        [Route("verify-otp")]
+        [SwaggerOperation(Summary = "Xác nhận mã OTP", Description = "Xác nhận mã OTP để đổi mật khẩu")]
+        public async Task<IActionResult> VerifyOTP([FromBody] string otp)
+        {
+            var response = await _accountServices.VerifyOTPAsync(otp);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("reset-password")]
+        [SwaggerOperation(Summary = "Đặt lại mật khẩu", Description = "Đặt lại mật mật khẩu người dùng")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(
+                    new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Thông tin mật khẩu không hợp lệ"
+                    }
+                );
+            }
+            var response = await _accountServices.ResetPasswordAsync(model);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

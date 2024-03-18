@@ -172,6 +172,204 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+
+        public async Task<ActionResponse> ForgotPasswordAsync(string email)
+        {
+            try
+            {
+                var user = await _userManager.FindByEmailAsync(email);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                var otp = new Random().Next(100000, 999999).ToString();
+                OTPVerifyModel OTPVerifyModel = new OTPVerifyModel
+                {
+                    OTP = otp,
+                    UserId = user.Id
+                };
+                // Send OTP to user's email
+                // I will not include the code to send email here
+                await _cacheServices.SetDataAsync<OTPVerifyModel>($"FORGOT-PASSWORD-ID:{OTPVerifyModel.Id}", OTPVerifyModel, new DateTimeOffset(DateTime.UtcNow.AddMinutes(5)));
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("FORGOT-PASSWORD-ID", OTPVerifyModel.Id, options: new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(5),
+                    HttpOnly = true,
+                    Secure = false,
+                    SameSite = SameSiteMode.None
+
+                });
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Mã OTP đã được gửi đến email của bạn"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/ForgotPasswordAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> VerifyOTPAsync(string otp)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(otp))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Vui lòng nhập mã OTP"
+                    };
+                }
+                var requestId = _httpContextAccessor?.HttpContext?.Request.Cookies["FORGOT-PASSWORD-ID"];
+                if (string.IsNullOrEmpty(requestId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Mã OTP không hợp lệ hoặc đã hết hạn"
+                    };
+                }
+                var OTPVerifyModel = await _cacheServices.GetDataAsync<OTPVerifyModel>($"FORGOT-PASSWORD-ID:{requestId}");
+                if (OTPVerifyModel == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Mã OTP không hợp lệ hoặc đã hết hạn"
+                    };
+                }
+                if (OTPVerifyModel.OTP != otp)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Mã OTP không hợp lệ hoặc đã hết hạn"
+                    };
+                }
+                var user = await _userManager.FindByIdAsync(OTPVerifyModel.UserId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                await _cacheServices.RemoveDataAsync($"FORGOT-PASSWORD-ID:{requestId}");
+                var CookieOptions = new CookieOptions
+                {
+                    Expires = DateTimeOffset.UtcNow.AddMinutes(5),
+                    HttpOnly = true,
+                    Secure = false,
+                    SameSite = SameSiteMode.None
+                };
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Delete("FORGOT-PASSWORD-ID");
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("FORGOT-PASSWORD-TOKEN", token, CookieOptions);
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Append("FORGOT-PASSWORD-UID", user.Id, CookieOptions);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    Message = "Xác thực OTP thành công",
+                    IsSuccess = true,
+                };
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/VerifyForgotPasswordOTP: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Lỗi xác thực OTP, vui lòng thử lại sau"
+                };
+
+            }
+        }
+        public async Task<ActionResponse> ResetPasswordAsync(ResetPasswordModel model)
+        {
+            if (!model.CheckSamePassword())
+            {
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    IsSuccess = false,
+                    Message = "Mật khẩu và xác nhận mật khẩu không trùng khớp"
+                };
+            }
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.Request.Cookies["FORGOT-PASSWORD-UID"];
+                var token = _httpContextAccessor?.HttpContext?.Request.Cookies["FORGOT-PASSWORD-TOKEN"];
+                if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin xác thực mật khẩu"
+                    };
+                }
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                var response = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+                if (!response.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Thay đổi mật khẩu không thành công"
+                    };
+                }
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Delete("FORGOT-PASSWORD-TOKEN");
+                _httpContextAccessor?.HttpContext?.Response.Cookies.Delete("FORGOT-PASSWORD-UID");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Thay đổi mật khẩu thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/ResetPasswordAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống, vui lòng thử lại sau"
+                };
+            }
+        }
         public async Task<ActionResponse> GetCurrentUserAsync(bool? skipCache = false)
         {
             try
