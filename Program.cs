@@ -43,7 +43,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 });
 // Add services to Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => { options.SignIn.RequireConfirmedAccount = false; })
-    .AddEntityFrameworkStores<ApplicationDBContext>();
+    .AddEntityFrameworkStores<ApplicationDBContext>()
+    .AddDefaultTokenProviders();
 // Add services to JWT
 builder.Services.AddAuthentication(options =>
 {

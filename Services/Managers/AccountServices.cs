@@ -27,7 +27,152 @@ namespace VinhUni_Educator_API.Services
             _cacheServices = cacheServices;
             _mapper = mapper;
         }
-        public async Task<ActionResponse> GetCurrentUser(bool skipCache = true)
+
+        public async Task<ActionResponse> ChangePasswordAsync(ChangePasswordModel model)
+        {
+            if (!model.CheckSamePassword())
+            {
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    IsSuccess = false,
+                    Message = "Mật khẩu và xác nhận mật khẩu không trùng khớp"
+                };
+            }
+            try
+            {
+                var userContext = _httpContextAccessor?.HttpContext?.User;
+                if (!userContext?.Identity?.IsAuthenticated ?? false)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn chưa đăng nhập vào hệ thống"
+                    };
+                }
+                if (!model.CheckSameOldPassword())
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Mật khẩu mới không được trùng với mật khẩu cũ"
+                    };
+                }
+                var currentUser = userContext != null ? await _userManager.GetUserAsync(userContext) : throw new Exception("Không tìm thấy thông tin người dùng");
+                if (currentUser == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                var response = await _userManager.ChangePasswordAsync(currentUser, model.OldPassword, model.NewPassword);
+                if (!response.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Thay đổi mật khẩu không thành công"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Thay đổi mật khẩu thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/ChangePasswordAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống, vui lòng thử lại sau"
+                };
+            }
+        }
+
+        public async Task<ActionResponse> FirstChangePasswordAsync(ResetPasswordModel model)
+        {
+            if (!model.CheckSamePassword())
+            {
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    IsSuccess = false,
+                    Message = "Mật khẩu và xác nhận mật khẩu không trùng khớp"
+                };
+            }
+            try
+            {
+                var userContext = _httpContextAccessor?.HttpContext?.User;
+                if (!userContext?.Identity?.IsAuthenticated ?? false)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn chưa đăng nhập vào hệ thống"
+                    };
+                }
+                var currentUser = userContext != null ? await _userManager.GetUserAsync(userContext) : throw new Exception("Không tìm thấy thông tin người dùng");
+                if (currentUser == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                if (currentUser.IsPasswordChanged)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Mật khẩu của bạn đã được cập nhật trước đó, vui lòng sử dụng chức năng quên mật khẩu để cập nhật mật khẩu mới"
+                    };
+                }
+                var token = await _userManager.GeneratePasswordResetTokenAsync(currentUser);
+                var response = await _userManager.ResetPasswordAsync(currentUser, token, model.NewPassword);
+                if (!response.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Thay đổi mật khẩu không thành công"
+                    };
+                }
+                currentUser.IsPasswordChanged = true;
+                await _userManager.UpdateAsync(currentUser);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Thay đổi mật khẩu thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/FirstChangePasswordAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetCurrentUserAsync(bool? skipCache = false)
         {
             try
             {
@@ -38,11 +183,11 @@ namespace VinhUni_Educator_API.Services
                     {
                         StatusCode = StatusCodes.Status401Unauthorized,
                         IsSuccess = false,
-                        Message = "User is not authenticated"
+                        Message = "Bạn chưa đăng nhập vào hệ thống"
                     };
                 }
                 var userId = userContext?.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new Exception("User not found");
-                if (skipCache)
+                if (!skipCache ?? false)
                 {
                     var currentUserInfo = await _cacheServices.GetDataAsync<PublicUserModel>($"USER-INFO_{userId}");
                     if (currentUserInfo == null)
