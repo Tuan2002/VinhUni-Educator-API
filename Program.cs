@@ -24,6 +24,7 @@ var issuer = builder.Configuration["JWT:ValidIssuer"] ?? throw new InvalidOperat
 var audience = builder.Configuration["JWT:ValidAudience"] ?? throw new InvalidOperationException("Audience invalid.");
 var policyName = "CORSPolicy";
 // Add services to configure CORS
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: policyName,

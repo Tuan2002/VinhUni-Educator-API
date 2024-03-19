@@ -101,5 +101,25 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _accountServices.ResetPasswordAsync(model);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpPut]
+        [Authorize]
+        [Route("update-profile")]
+        [SwaggerOperation(Summary = "Cập nhật thông tin cá nhân", Description = "Cập nhật thông tin cá nhân người dùng")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(
+                    new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Thông tin cập nhật không hợp lệ"
+                    }
+                );
+            }
+            var response = await _accountServices.UpdateProfileAsync(model);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

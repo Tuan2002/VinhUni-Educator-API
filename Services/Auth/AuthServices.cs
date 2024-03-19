@@ -378,46 +378,6 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetCurrentUserAsync()
-        {
-            try
-            {
-                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (userId is null)
-                {
-                    throw new InvalidOperationException("UserId not found");
-                }
-                var user = await _userManager.FindByIdAsync(userId);
-                if (user is null)
-                {
-                    return new ActionResponse
-                    {
-                        StatusCode = 404,
-                        IsSuccess = false,
-                        Message = "Tài khoản người dùng không tồn tại"
-                    };
-                }
-                var userRoles = await _userManager.GetRolesAsync(user);
-                var userInfo = _mapper.Map<PublicUserModel>(user);
-                userInfo.Roles = userRoles;
-                return new ActionResponse
-                {
-                    StatusCode = 200,
-                    IsSuccess = true,
-                    Data = userInfo
-                };
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error occurred while getting current user: {e.Message} at {DateTime.UtcNow}");
-                return new ActionResponse
-                {
-                    StatusCode = 500,
-                    IsSuccess = false,
-                    Message = "Error occurred while getting current user, please try again later or contact administrator"
-                };
-            }
-        }
         public async Task<ActionResponse> LogoutAsync(string accessToken, string refreshToken)
         {
             try
