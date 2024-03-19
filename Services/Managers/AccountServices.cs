@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.VisualBasic;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
@@ -424,6 +425,60 @@ namespace VinhUni_Educator_API.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error in AccountServices/GetCurrentUser: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Lỗi hệ thống, vui lòng thử lại sau"
+                };
+            }
+        }
+
+        public async Task<ActionResponse> UpdateProfileAsync(UpdateProfileModel model)
+        {
+            try
+            {
+                var currentUser = await _userManager.GetUserAsync(_httpContextAccessor?.HttpContext?.User ?? throw new Exception("Không tìm thấy thông tin người dùng"));
+                if (currentUser == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                currentUser.FirstName = model.FirstName ?? currentUser.FirstName;
+                currentUser.LastName = model.LastName ?? currentUser.LastName;
+                currentUser.Email = model.Email ?? currentUser.Email;
+                currentUser.PhoneNumber = model.PhoneNumber ?? currentUser.PhoneNumber;
+                currentUser.Address = model.Address ?? currentUser.Address;
+                currentUser.Avatar = model.Avatar ?? currentUser.Avatar;
+                currentUser.DateOfBirth = model.DateOfBirth ?? currentUser.DateOfBirth;
+                var result = await _userManager.UpdateAsync(currentUser);
+                if (!result.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Cập nhật thông tin người dùng không thành công"
+                    };
+                }
+                var userRoles = await _userManager.GetRolesAsync(currentUser);
+                var newUserInfo = _mapper.Map<PublicUserModel>(currentUser);
+                newUserInfo.Roles = userRoles;
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Cập nhật thông tin người dùng thành công",
+                    Data = newUserInfo
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/UpdateProfileAsync: {ex.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status500InternalServerError,

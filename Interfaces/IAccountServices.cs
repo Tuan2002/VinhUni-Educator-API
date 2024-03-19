@@ -11,5 +11,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> ForgotPasswordAsync(string email);
         Task<ActionResponse> VerifyOTPAsync(string otp);
         Task<ActionResponse> ResetPasswordAsync(ResetPasswordModel model);
+        Task<ActionResponse> UpdateProfileAsync(UpdateProfileModel model);
     }
 }
