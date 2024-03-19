@@ -46,7 +46,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 });
 // Add services to Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => { options.SignIn.RequireConfirmedAccount = false; })
-    .AddEntityFrameworkStores<ApplicationDBContext>();
+    .AddEntityFrameworkStores<ApplicationDBContext>()
+    .AddDefaultTokenProviders();
 // Add services to JWT
 builder.Services.AddAuthentication(options =>
 {
@@ -120,7 +121,7 @@ builder.Services.AddScoped<ICourseServices, CourseServices>();
 builder.Services.AddScoped<IProgramServices, ProgramServices>();
 builder.Services.AddScoped<IPrimaryClassServices, PrimaryClassServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
-// builder.Services.AddScoped<IAccountServices, AccountServices>();
+builder.Services.AddScoped<IAccountServices, AccountServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {
