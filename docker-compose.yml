@@ -1,4 +1,4 @@
-version: '3.4'
+version: '3.8'
 
 services:
   educator.api:
@@ -21,20 +21,28 @@ services:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=tuandev2002
     volumes:
-      - app-database:/var/lib/postgresql/database
+      - ~/postgres/data:/var/lib/postgresql/data
+      - ~/postgres/logs:/var/log/postgresql
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf
     ports:
-      - 5432:5432
+      - "5432:5432"
+    restart: unless-stopped
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
 
   educator.redis:
     image: redis:latest
+    container_name: redis-database
     restart: always
     ports:
       - '6379:6379'
     volumes:
       - app-redis:/data
-volumes: 
-  app-database:
-    external: true
+volumes:
+  data:
+    driver: local
+  logs:
+    driver: local
   app-redis:
     external: true
   app-api:
