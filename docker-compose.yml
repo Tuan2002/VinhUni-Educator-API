@@ -1,0 +1,41 @@
+version: '3.4'
+
+services:
+  educator.api:
+    image: vinhuni-educator-api
+    container_name: vinhuni-educator
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "5500:5500"
+    volumes:
+      - app-api:/home/app/.aspnet/DataProtection-Keys
+
+  educator.database:
+    image: postgres:latest
+    container_name: educator-database
+    environment:
+      - POSTGRES_DB=VinhUni-Educator
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=tuandev2002
+    volumes:
+      - app-database:/var/lib/postgresql/database
+    ports:
+      - 5432:5432
+
+  educator.redis:
+    image: redis:latest
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - app-redis:/data
+volumes: 
+  app-database:
+    external: true
+  app-redis:
+    external: true
+  app-api:
+    external: true
