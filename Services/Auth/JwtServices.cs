@@ -73,8 +73,8 @@ namespace VinhUni_Educator_API.Services
                 }
                 authClaims.Add(new Claim(JwtRegisteredClaimNames.Jti, idToken));
                 var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(refreshTokenSecret));
-                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
-                var expiration = DateTime.UtcNow.AddDays(tokenValidityInDays);
+                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInMinutes"], out int tokenValidityInMinutes);
+                var expiration = DateTime.UtcNow.AddMinutes(tokenValidityInMinutes);
                 var refreshToken = new JwtSecurityToken(
                     issuer: _configuration["JWT:ValidIssuer"],
                     audience: _configuration["JWT:ValidAudience"],

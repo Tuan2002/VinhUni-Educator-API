@@ -1,6 +1,9 @@
 ﻿using System.Text;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -26,7 +29,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: policyName,
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000", "https://educator.vinhuniversity.local", "https://educator.vinhuniversity.edu.vn")
+            policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? throw new InvalidOperationException("Allowed origins invalid"))
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -86,6 +89,12 @@ builder.Services.AddAuthentication(options =>
         }
     };
 });
+builder.Services.AddDataProtection()
+    .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration()
+    {
+        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+    });
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddControllers().AddNewtonsoftJson();
@@ -125,12 +134,13 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(config =>
-    {
-        config.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
-    });
+    // app.ApplyMigrations();
 }
+app.UseSwagger();
+app.UseSwaggerUI(config =>
+{
+    config.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
+});
 app.UseCors(policyName);
 app.UseHttpsRedirection();
 app.UseMiddleware<VerifyRevokedToken>();
