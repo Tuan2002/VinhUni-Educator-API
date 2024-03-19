@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
-using System.Text.Json;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -325,7 +324,6 @@ namespace VinhUni_Educator_API.Services
                 {
                     throw new InvalidOperationException("Cannot generate token");
                 }
-                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
                 var userRefreshToken = new RefreshToken
                 {
                     JwtId = newRefreshTokenResponse.TokenId,
@@ -346,7 +344,7 @@ namespace VinhUni_Educator_API.Services
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.None,
-                    Expires = DateTime.UtcNow.AddDays(tokenValidityInDays)
+                    Expires = newRefreshTokenResponse.Expiration
                 });
                 return new ActionResponse
                 {
