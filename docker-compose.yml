@@ -10,8 +10,6 @@ services:
     ports:
       - "8080:8080"
       - "5500:5500"
-    volumes:
-      - app-api:/home/app/.aspnet/DataProtection-Keys
 
   educator.database:
     image: postgres:latest
@@ -38,6 +36,4 @@ volumes:
   app-database:
     external: true
   app-redis:
-    external: true
-  app-api:
     external: true
