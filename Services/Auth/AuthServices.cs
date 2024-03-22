@@ -95,7 +95,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.None,
+                    SameSite = SameSiteMode.Lax,
                     Expires = refreshTokenResponse.Expiration
                 });
                 return new ActionResponse
@@ -272,7 +272,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.None,
+                    SameSite = SameSiteMode.Lax,
                     Expires = refreshTokenResponse.Expiration
                 });
                 return new ActionResponse
@@ -343,7 +343,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     HttpOnly = true,
                     Secure = true,
-                    SameSite = SameSiteMode.None,
+                    SameSite = SameSiteMode.Lax,
                     Expires = newRefreshTokenResponse.Expiration
                 });
                 return new ActionResponse
