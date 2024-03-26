@@ -41,7 +41,7 @@ namespace VinhUni_Educator_API.Services
             {
                 return new ActionResponse
                 {
-                    StatusCode = 404,
+                    StatusCode = StatusCodes.Status404NotFound,
                     IsSuccess = false,
                     Message = "Không thể xác minh thông tin người dùng"
                 };
@@ -53,7 +53,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     return new ActionResponse
                     {
-                        StatusCode = 404,
+                        StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
                         Message = "Không thể xác minh thông tin người dùng"
                     };
@@ -89,7 +89,7 @@ namespace VinhUni_Educator_API.Services
                     await _context.Database.RollbackTransactionAsync();
                     return new ActionResponse
                     {
-                        StatusCode = 400,
+                        StatusCode = StatusCodes.Status500InternalServerError,
                         IsSuccess = false,
                         Message = "Không thể tạo tài khoản người dùng"
                     };
@@ -111,7 +111,7 @@ namespace VinhUni_Educator_API.Services
                             await _context.Database.RollbackTransactionAsync();
                             return new ActionResponse
                             {
-                                StatusCode = 404,
+                                StatusCode = StatusCodes.Status404NotFound,
                                 IsSuccess = false,
                                 Message = "Không thể xác minh thông tin người học"
                             };
@@ -134,7 +134,7 @@ namespace VinhUni_Educator_API.Services
                             await _context.Database.RollbackTransactionAsync();
                             return new ActionResponse
                             {
-                                StatusCode = 404,
+                                StatusCode = StatusCodes.Status404NotFound,
                                 IsSuccess = false,
                                 Message = "Không thể xác minh thông tin người học"
                             };
@@ -184,7 +184,7 @@ namespace VinhUni_Educator_API.Services
                             await _context.Database.RollbackTransactionAsync();
                             return new ActionResponse
                             {
-                                StatusCode = 404,
+                                StatusCode = StatusCodes.Status404NotFound,
                                 IsSuccess = false,
                                 Message = "Không thể xác minh thông tin giáo viên"
                             };
@@ -264,7 +264,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var query = _userManager.Users.AsQueryable();
-                query = query.Where(u => u.IsDeleted == false);
+                query = query.Where(u => u.IsDeleted == false || u.IsDeleted == null);
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
 
@@ -329,7 +329,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     return new ActionResponse
                     {
-                        StatusCode = 404,
+                        StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
                         Message = "Không tìm thấy người dùng"
                     };
@@ -365,7 +365,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     return new ActionResponse
                     {
-                        StatusCode = 404,
+                        StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
                         Message = "Không tìm thấy người dùng"
                     };
@@ -392,6 +392,122 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetUserByIdAsync(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin người dùng thành công",
+                    Data = _mapper.Map<PublicUserModel>(user)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/GetUserByIdAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> GetUserByNameAsync(string userName)
+        {
+            try
+            {
+                var user = await _userManager.FindByNameAsync(userName);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin người dùng thành công",
+                    Data = _mapper.Map<PublicUserModel>(user)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/GetUserByNameAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> UpdateUserAsync(string userId, UpdateProfileModel model)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                user.FirstName = model.FirstName ?? user.FirstName;
+                user.LastName = model.LastName ?? user.LastName;
+                user.Email = model.Email ?? user.Email;
+                user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+                user.Address = model.Address ?? user.Address;
+                user.Avatar = model.Avatar ?? user.Avatar;
+                user.DateOfBirth = model.DateOfBirth ?? user.DateOfBirth;
+                var response = await _userManager.UpdateAsync(user);
+                if (!response.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Không thể cập nhật thông tin người dùng"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Cập nhật thông tin người dùng thành công",
+                    Data = _mapper.Map<UserViewModel>(user)
+                };
 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/UpdateUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
     }
 }
