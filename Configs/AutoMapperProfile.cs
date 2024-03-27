@@ -10,6 +10,7 @@ namespace VinhUni_Educator_API.Configs
         {
             CreateMap<RefreshToken, RefreshTokenModel>();
             CreateMap<ApplicationUser, PublicUserModel>();
+            CreateMap<ApplicationUser, UserViewModel>();
         }
     }
 }

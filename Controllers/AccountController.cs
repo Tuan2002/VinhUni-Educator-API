@@ -9,6 +9,7 @@ namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     [SwaggerTag("Các chức năng liên quan đến tài khoản người dùng")]
     public class AccountController : ControllerBase
     {
@@ -18,7 +19,6 @@ namespace VinhUni_Educator_API.Controllers
             _accountServices = accountServices;
         }
         [HttpGet]
-        [Authorize]
         [Route("me")]
         [SwaggerOperation(Summary = "Lấy thông tin người dùng hiện tại", Description = "Lấy thông tin người dùng hiện tại")]
         public async Task<IActionResult> GetCurrentUser(bool? skipCache)
@@ -27,7 +27,6 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
-        [Authorize]
         [Route("set-password")]
         [SwaggerOperation(Summary = "Thay đổi mật khẩu lần đầu", Description = "Thay đổi mật khẩu lần đầu sau khi đăng nhập tài khoản")]
         public async Task<IActionResult> FirstChangePassword([FromBody] ResetPasswordModel model)
@@ -47,7 +46,6 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
-        [Authorize]
         [Route("change-password")]
         [SwaggerOperation(Summary = "Thay đổi mật khẩu", Description = "Thay đổi mật khẩu người dùng")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
@@ -102,7 +100,6 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
-        [Authorize]
         [Route("update-profile")]
         [SwaggerOperation(Summary = "Cập nhật thông tin cá nhân", Description = "Cập nhật thông tin cá nhân người dùng")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileModel model)
@@ -120,6 +117,26 @@ namespace VinhUni_Educator_API.Controllers
             }
             var response = await _accountServices.UpdateProfileAsync(model);
             return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("change-avatar")]
+        [SwaggerOperation(Summary = "Thay đổi ảnh đại diện", Description = "Thay đổi ảnh đại diện người dùng")]
+        public async Task<IActionResult> UploadProfileImage([FromBody] UploadProfileImage model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(
+                    new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Thông tin ảnh không hợp lệ"
+                    }
+                );
+            }
+            var response = await _accountServices.UploadProfileImageAsync(model);
+            return StatusCode(response.StatusCode, response);
+
         }
     }
 }
