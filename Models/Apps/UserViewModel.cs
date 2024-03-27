@@ -10,13 +10,13 @@ namespace VinhUni_Educator_API.Models
         public string? LastName { get; set; }
         public int? Gender { get; set; }
         public DateOnly? DateOfBirth { get; set; }
-        public bool? Address { get; set; }
-        public string? PhoneNumber { get; set; }
         public string? Avatar { get; set; }
+        public string? Address { get; set; }
+        public string? PhoneNumber { get; set; }
         public DateTime? CreatedAt { get; set; }
-        public bool? IsPasswordChanged { get; set; } = false;
         public bool? IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
-        public string? DeletedBy { get; set; }
+        public IList<string>? Roles { get; set; }
     }
 }
+

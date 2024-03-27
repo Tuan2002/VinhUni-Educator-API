@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
@@ -19,13 +20,20 @@ namespace VinhUni_Educator_API.Services
         private readonly IJwtServices _jwtServices;
         private readonly ApplicationDBContext _context;
         private readonly IConfiguration _config;
-        public UserServices(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDBContext context, IJwtServices jwtServices, IConfiguration config)
+        private readonly IMapper _mapper;
+        private readonly ILogger<UserServices> _logger;
+        public int DEFAULT_PAGE_SIZE = 10;
+        public int DEFAULT_PAGE_INDEX = 1;
+        public int DEFAULT_SEARCH_RESULT = 10;
+        public UserServices(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDBContext context, IJwtServices jwtServices, IConfiguration config, IMapper mapper, ILogger<UserServices> logger)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _context = context;
             _config = config;
             _jwtServices = jwtServices;
+            _mapper = mapper;
+            _logger = logger;
         }
         public async Task<ActionResponse> SyncUserFromSSO(string token)
         {
@@ -34,7 +42,7 @@ namespace VinhUni_Educator_API.Services
             {
                 return new ActionResponse
                 {
-                    StatusCode = 404,
+                    StatusCode = StatusCodes.Status404NotFound,
                     IsSuccess = false,
                     Message = "Không thể xác minh thông tin người dùng"
                 };
@@ -46,7 +54,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     return new ActionResponse
                     {
-                        StatusCode = 404,
+                        StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
                         Message = "Không thể xác minh thông tin người dùng"
                     };
@@ -82,7 +90,7 @@ namespace VinhUni_Educator_API.Services
                     await _context.Database.RollbackTransactionAsync();
                     return new ActionResponse
                     {
-                        StatusCode = 400,
+                        StatusCode = StatusCodes.Status500InternalServerError,
                         IsSuccess = false,
                         Message = "Không thể tạo tài khoản người dùng"
                     };
@@ -104,7 +112,7 @@ namespace VinhUni_Educator_API.Services
                             await _context.Database.RollbackTransactionAsync();
                             return new ActionResponse
                             {
-                                StatusCode = 404,
+                                StatusCode = StatusCodes.Status404NotFound,
                                 IsSuccess = false,
                                 Message = "Không thể xác minh thông tin người học"
                             };
@@ -127,7 +135,7 @@ namespace VinhUni_Educator_API.Services
                             await _context.Database.RollbackTransactionAsync();
                             return new ActionResponse
                             {
-                                StatusCode = 404,
+                                StatusCode = StatusCodes.Status404NotFound,
                                 IsSuccess = false,
                                 Message = "Không thể xác minh thông tin người học"
                             };
@@ -177,7 +185,7 @@ namespace VinhUni_Educator_API.Services
                             await _context.Database.RollbackTransactionAsync();
                             return new ActionResponse
                             {
-                                StatusCode = 404,
+                                StatusCode = StatusCodes.Status404NotFound,
                                 IsSuccess = false,
                                 Message = "Không thể xác minh thông tin giáo viên"
                             };
@@ -228,7 +236,7 @@ namespace VinhUni_Educator_API.Services
                         break;
                     // Sync teacher info to local database
                     default:
-                        break;
+                        throw new Exception("Không thể xác minh thông tin người dùng");
                 }
                 await _context.SaveChangesAsync();
                 await _context.Database.CommitTransactionAsync();
@@ -243,6 +251,377 @@ namespace VinhUni_Educator_API.Services
             catch (Exception ex)
             {
                 await _context.Database.RollbackTransactionAsync();
+                _logger.LogError($"Error in UserService/SyncFromSSO: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> CreateUserAsync(CreateUserModel model)
+        {
+            try
+            {
+                var newUser = new ApplicationUser
+                {
+                    UserName = model.UserName,
+                    Email = model.Email,
+                    USmartId = model.USmartId,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    Address = model.Address,
+                    Avatar = model.Avatar,
+                    DateOfBirth = model.DateOfBirth,
+                    PhoneNumber = model.PhoneNumber,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                var result = await _userManager.CreateAsync(newUser, model.GeneratePassword());
+                if (!result.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Không thể tạo tài khoản người dùng"
+                    };
+                }
+                if (model.Roles != null)
+                {
+                    foreach (var role in model.Roles)
+                    {
+                        if (!await _roleManager.RoleExistsAsync(role))
+                        {
+                            continue;
+                        }
+                        await _userManager.AddToRoleAsync(newUser, role);
+                    }
+                }
+                var currentUser = _mapper.Map<UserViewModel>(newUser);
+                currentUser.Roles = model.Roles;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Tạo tài khoản người dùng thành công",
+                    Data = currentUser
+                };
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/CreateUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
+        public async Task<ActionResponse> GetUsersAsync(int? PageIndex, int? limit)
+        {
+            try
+            {
+                var query = _userManager.Users.AsQueryable();
+                query = query.Where(u => u.IsDeleted == false || u.IsDeleted == null);
+                var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
+                var pageSize = limit ?? DEFAULT_PAGE_SIZE;
+                // Get users with pagination
+                var result = await PageList<ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
+                var userList = new PageList<UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                foreach (var user in result.Items)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    var userVM = userList.Items.FirstOrDefault(u => u.Id == user.Id);
+                    if (userVM != null)
+                    {
+                        userVM.Roles = roles;
+                    }
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách người dùng thành công",
+                    Data = userList
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/GetUsersAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> GetDeletedUsersAsync(int? PageIndex, int? limit)
+        {
+            try
+            {
+                var query = _userManager.Users.AsQueryable();
+                query = query.Where(u => u.IsDeleted == true);
+                var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
+                var pageSize = limit ?? DEFAULT_PAGE_SIZE;
+                // Get deleted users with pagination
+                var result = await PageList<ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
+                var userList = new PageList<UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                foreach (var user in result.Items)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    var userVM = userList.Items.FirstOrDefault(u => u.Id == user.Id);
+                    if (userVM != null)
+                    {
+                        userVM.Roles = roles;
+                    }
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách người dùng đã xóa thành công",
+                    Data = userList
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/GetDeletedUsers: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+
+            }
+        }
+        public async Task<ActionResponse> DeleteUserAsync(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                user.IsDeleted = true;
+                user.DeletedAt = DateTime.UtcNow;
+                user.DeletedBy = userId;
+                await _userManager.UpdateAsync(user);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Xóa người dùng thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/DeleteUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> RestoreUserAsync(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                user.IsDeleted = false;
+                user.DeletedAt = null;
+                user.DeletedBy = null;
+                await _userManager.UpdateAsync(user);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Khôi phục người dùng thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/RestoreUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> GetUserByIdAsync(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                var roles = await _userManager.GetRolesAsync(user);
+                var userInfo = _mapper.Map<UserViewModel>(user);
+                userInfo.Roles = roles;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin người dùng thành công",
+                    Data = userInfo
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/GetUserByIdAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> GetUserByNameAsync(string userName)
+        {
+            try
+            {
+                var user = await _userManager.FindByNameAsync(userName);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                var roles = await _userManager.GetRolesAsync(user);
+                var userInfo = _mapper.Map<UserViewModel>(user);
+                userInfo.Roles = roles;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin người dùng thành công",
+                    Data = userInfo
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/GetUserByNameAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> UpdateUserAsync(string userId, UpdateProfileModel model)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                user.FirstName = model.FirstName ?? user.FirstName;
+                user.LastName = model.LastName ?? user.LastName;
+                user.Email = model.Email ?? user.Email;
+                user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+                user.Address = model.Address ?? user.Address;
+                user.DateOfBirth = model.DateOfBirth ?? user.DateOfBirth;
+                var response = await _userManager.UpdateAsync(user);
+                if (!response.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Không thể cập nhật thông tin người dùng"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Cập nhật thông tin người dùng thành công",
+                    Data = _mapper.Map<UserViewModel>(user)
+                };
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/UpdateUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> SearchUsersAsync(string searchKey, int? limit)
+        {
+            try
+            {
+                var searchResultCount = limit ?? DEFAULT_SEARCH_RESULT;
+                var query = _userManager.Users.AsQueryable();
+                if (searchKey != null)
+                {
+                    query = query.Where(u => u.FirstName != null && u.FirstName.Contains(searchKey) || u.LastName != null && u.LastName.Contains(searchKey) || u.UserName != null && u.UserName.Contains(searchKey));
+                }
+                query = query.Take(searchResultCount);
+                var result = await query.ToListAsync();
+                var totalCount = result.Count;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = $"Tìm thấy {totalCount} kết quả",
+                    Data = new
+                    {
+                        TotalCount = totalCount,
+                        Users = _mapper.Map<List<UserViewModel>>(result)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/SearchUsersAsync: {ex.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = 500,

@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.VisualBasic;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
@@ -453,7 +452,6 @@ namespace VinhUni_Educator_API.Services
                 currentUser.Email = model.Email ?? currentUser.Email;
                 currentUser.PhoneNumber = model.PhoneNumber ?? currentUser.PhoneNumber;
                 currentUser.Address = model.Address ?? currentUser.Address;
-                currentUser.Avatar = model.Avatar ?? currentUser.Avatar;
                 currentUser.DateOfBirth = model.DateOfBirth ?? currentUser.DateOfBirth;
                 var result = await _userManager.UpdateAsync(currentUser);
                 if (!result.Succeeded)
@@ -484,6 +482,49 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = "Lỗi hệ thống, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> UploadProfileImageAsync(UploadProfileImage image)
+        {
+            try
+            {
+                var currentUser = await _userManager.GetUserAsync(_httpContextAccessor?.HttpContext?.User ?? throw new Exception("Không tìm thấy thông tin người dùng"));
+                if (currentUser == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin người dùng"
+                    };
+                }
+                currentUser.Avatar = image.ImageURL;
+                var result = await _userManager.UpdateAsync(currentUser);
+                if (!result.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Cập nhật ảnh đại diện không thành công"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Cập nhật ảnh đại diện thành công",
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/UpdateProfileImage: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = ex.Message
                 };
             }
         }
