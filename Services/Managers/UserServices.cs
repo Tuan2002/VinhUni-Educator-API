@@ -24,6 +24,7 @@ namespace VinhUni_Educator_API.Services
         private readonly ILogger<UserServices> _logger;
         public int DEFAULT_PAGE_SIZE = 10;
         public int DEFAULT_PAGE_INDEX = 1;
+        public int DEFAULT_SEARCH_RESULT = 10;
         public UserServices(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDBContext context, IJwtServices jwtServices, IConfiguration config, IMapper mapper, ILogger<UserServices> logger)
         {
             _userManager = userManager;
@@ -259,6 +260,67 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> CreateUserAsync(CreateUserModel model)
+        {
+            try
+            {
+                var newUser = new ApplicationUser
+                {
+                    UserName = model.UserName,
+                    Email = model.Email,
+                    USmartId = model.USmartId,
+                    FirstName = model.FirstName,
+                    LastName = model.LastName,
+                    Address = model.Address,
+                    Avatar = model.Avatar,
+                    DateOfBirth = model.DateOfBirth,
+                    PhoneNumber = model.PhoneNumber,
+                    CreatedAt = DateTime.UtcNow,
+                };
+                var result = await _userManager.CreateAsync(newUser, model.GeneratePassword());
+                if (!result.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Không thể tạo tài khoản người dùng"
+                    };
+                }
+                if (model.Roles != null)
+                {
+                    foreach (var role in model.Roles)
+                    {
+                        if (!await _roleManager.RoleExistsAsync(role))
+                        {
+                            continue;
+                        }
+                        await _userManager.AddToRoleAsync(newUser, role);
+                    }
+                }
+                var currentUser = _mapper.Map<UserViewModel>(newUser);
+                currentUser.Roles = model.Roles;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Tạo tài khoản người dùng thành công",
+                    Data = currentUser
+                };
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/CreateUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+
         public async Task<ActionResponse> GetUsersAsync(int? PageIndex, int? limit)
         {
             try
@@ -267,9 +329,18 @@ namespace VinhUni_Educator_API.Services
                 query = query.Where(u => u.IsDeleted == false || u.IsDeleted == null);
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
-
+                // Get users with pagination
                 var result = await PageList<ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
-                var userList = new PageList<PublicUserModel>(_mapper.Map<List<PublicUserModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                var userList = new PageList<UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                foreach (var user in result.Items)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    var userVM = userList.Items.FirstOrDefault(u => u.Id == user.Id);
+                    if (userVM != null)
+                    {
+                        userVM.Roles = roles;
+                    }
+                }
                 return new ActionResponse
                 {
                     StatusCode = 200,
@@ -297,9 +368,18 @@ namespace VinhUni_Educator_API.Services
                 query = query.Where(u => u.IsDeleted == true);
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
-
+                // Get deleted users with pagination
                 var result = await PageList<ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
-                var userList = new PageList<PublicUserModel>(_mapper.Map<List<PublicUserModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                var userList = new PageList<UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                foreach (var user in result.Items)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    var userVM = userList.Items.FirstOrDefault(u => u.Id == user.Id);
+                    if (userVM != null)
+                    {
+                        userVM.Roles = roles;
+                    }
+                }
                 return new ActionResponse
                 {
                     StatusCode = 200,
@@ -406,12 +486,15 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy người dùng"
                     };
                 }
+                var roles = await _userManager.GetRolesAsync(user);
+                var userInfo = _mapper.Map<UserViewModel>(user);
+                userInfo.Roles = roles;
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
                     Message = "Lấy thông tin người dùng thành công",
-                    Data = _mapper.Map<PublicUserModel>(user)
+                    Data = userInfo
                 };
             }
             catch (Exception ex)
@@ -439,12 +522,15 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy người dùng"
                     };
                 }
+                var roles = await _userManager.GetRolesAsync(user);
+                var userInfo = _mapper.Map<UserViewModel>(user);
+                userInfo.Roles = roles;
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
                     Message = "Lấy thông tin người dùng thành công",
-                    Data = _mapper.Map<PublicUserModel>(user)
+                    Data = userInfo
                 };
             }
             catch (Exception ex)
@@ -477,7 +563,6 @@ namespace VinhUni_Educator_API.Services
                 user.Email = model.Email ?? user.Email;
                 user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
                 user.Address = model.Address ?? user.Address;
-                user.Avatar = model.Avatar ?? user.Avatar;
                 user.DateOfBirth = model.DateOfBirth ?? user.DateOfBirth;
                 var response = await _userManager.UpdateAsync(user);
                 if (!response.Succeeded)
@@ -501,6 +586,42 @@ namespace VinhUni_Educator_API.Services
             catch (Exception ex)
             {
                 _logger.LogError($"Error in UserService/UpdateUserAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> SearchUsersAsync(string searchKey, int? limit)
+        {
+            try
+            {
+                var searchResultCount = limit ?? DEFAULT_SEARCH_RESULT;
+                var query = _userManager.Users.AsQueryable();
+                if (searchKey != null)
+                {
+                    query = query.Where(u => u.FirstName != null && u.FirstName.Contains(searchKey) || u.LastName != null && u.LastName.Contains(searchKey) || u.UserName != null && u.UserName.Contains(searchKey));
+                }
+                query = query.Take(searchResultCount);
+                var result = await query.ToListAsync();
+                var totalCount = result.Count;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = $"Tìm thấy {totalCount} kết quả",
+                    Data = new
+                    {
+                        TotalCount = totalCount,
+                        Users = _mapper.Map<List<UserViewModel>>(result)
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/SearchUsersAsync: {ex.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = 500,

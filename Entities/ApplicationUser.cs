@@ -17,7 +17,6 @@ namespace VinhUni_Educator_API.Entities
         public bool? IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
         public string? DeletedBy { get; set; }
-        public virtual ICollection<IdentityUserRole<string>>? UserRoles { get; set; }
         public virtual ICollection<RefreshToken>? RefreshTokens { get; set; }
     }
 }

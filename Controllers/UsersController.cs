@@ -9,20 +9,35 @@ namespace VinhUni_Educator_API.Controllers
 
     [ApiController]
     [Route("api/[controller]")]
-    // [Authorize]
+    [Authorize]
     [SwaggerTag("Các chức năng liên quan đến quản lý người dùng")]
     public class UsersController : ControllerBase
     {
         private readonly IUserServices _userServices;
+        private const int DEFAULT_PAGE_INDEX = 1;
+        private const int DEFAULT_LIMIT = 10;
+        private const int DEFAULT_LIMIT_SEARCH = 10;
         public UsersController(IUserServices userServices)
         {
             _userServices = userServices;
+        }
+        [HttpPost]
+        [Route("create-user")]
+        [SwaggerOperation(Summary = "Thêm người dùng mới", Description = "Thêm người dùng vào hệ thống")]
+        public async Task<IActionResult> CreateUserAsync([FromBody] CreateUserModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _userServices.CreateUserAsync(model);
+            return StatusCode(response.StatusCode, response);
         }
 
         [HttpGet]
         [Route("get-users")]
         [SwaggerOperation(Summary = "Lấy danh sách người dùng", Description = "Lấy danh sách người dùng")]
-        public async Task<IActionResult> GetUsersAsync([FromQuery] int? pageIndex, [FromQuery] int? limit)
+        public async Task<IActionResult> GetUsersAsync([FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
         {
             var response = await _userServices.GetUsersAsync(pageIndex, limit);
             return StatusCode(response.StatusCode, response);
@@ -47,7 +62,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpGet]
         [Route("get-deleted-users")]
         [SwaggerOperation(Summary = "Lấy danh sách người dùng đã xóa", Description = "Lấy danh sách người dùng đã xóa")]
-        public async Task<IActionResult> GetDeletedUsersAsync([FromQuery] int? pageIndex, [FromQuery] int? limit)
+        public async Task<IActionResult> GetDeletedUsersAsync([FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
         {
             var response = await _userServices.GetDeletedUsersAsync(pageIndex, limit);
             return StatusCode(response.StatusCode, response);
@@ -74,6 +89,14 @@ namespace VinhUni_Educator_API.Controllers
         public async Task<IActionResult> UpdateUserAsync(string userId, [FromBody] UpdateProfileModel model)
         {
             var response = await _userServices.UpdateUserAsync(userId, model);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("search")]
+        [SwaggerOperation(Summary = "Tìm kiếm người dùng", Description = "Tìm kiếm người dùng")]
+        public async Task<IActionResult> SearchUsersAsync([FromQuery] string keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
+        {
+            var response = await _userServices.SearchUsersAsync(keyword, limit);
             return StatusCode(response.StatusCode, response);
         }
     }
