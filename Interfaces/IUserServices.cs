@@ -15,6 +15,7 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> DeleteUserAsync(string userId);
         Task<ActionResponse> RestoreUserAsync(string userId);
         Task<ActionResponse> UpdateUserAsync(string userId, UpdateProfileModel model);
+        Task<ActionResponse> ResetUserPasswordAsync(string userId, ResetPasswordModel model);
         Task<ActionResponse> SearchUsersAsync(string keyword, int? limit);
     }
 }

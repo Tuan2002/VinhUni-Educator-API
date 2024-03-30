@@ -7,7 +7,7 @@ namespace VinhUni_Educator_API.Interfaces
     {
         Task<ActionResponse> LoginAsync(LoginModel model);
         Task<ActionResponse> LoginSSOAsync(LoginModel model);
-        Task<ActionResponse> LogoutAsync(string accessToken, string refreshToken);
+        Task<ActionResponse> LogoutAsync(string? accessToken, string? refreshToken);
         Task<ActionResponse> RefreshTokenAsync(string token);
     }
 }

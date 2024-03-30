@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using VinhUni_Educator_API.Interfaces;
@@ -132,42 +131,13 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPost]
         [Route("logout")]
-        [Authorize]
         [SwaggerOperation(Summary = "Đăng xuất", Description = "Đăng xuất khỏi hệ thống")]
         public async Task<IActionResult> Logout()
         {
             var accessToken = await Request.HttpContext.GetTokenAsync("access_token");
             var refreshToken = Request.Cookies["refreshToken"];
-            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken))
-            {
-                return Unauthorized(
-                    new ActionResponse
-                    {
-                        StatusCode = 401,
-                        IsSuccess = false,
-                        Message = "You are not authorized, please login to get access"
-                    }
-                );
-            }
-            try
-            {
-                var response = await _authServices.LogoutAsync(accessToken, refreshToken);
-                if (!response.IsSuccess)
-                {
-                    return StatusCode(response.StatusCode, response);
-                }
-                return Ok(response);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error occurred while logging out: {e.Message} at {DateTime.UtcNow}");
-                return StatusCode(500, new ActionResponse
-                {
-                    StatusCode = 500,
-                    IsSuccess = false,
-                    Message = "Error occurred while logging out, please try again later or contact administrator"
-                });
-            }
+            var response = await _authServices.LogoutAsync(accessToken, refreshToken);
+            return StatusCode(response.StatusCode, response);
         }
     }
 }
