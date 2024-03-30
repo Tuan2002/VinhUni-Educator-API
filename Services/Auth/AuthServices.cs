@@ -96,6 +96,7 @@ namespace VinhUni_Educator_API.Services
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.Lax,
+                    // Domain = _configuration["API_DOMAIN"],
                     Expires = refreshTokenResponse.Expiration
                 });
                 return new ActionResponse
@@ -250,7 +251,7 @@ namespace VinhUni_Educator_API.Services
                 if (uSmartToken != null)
                 {
                     uSmartToken.Token = uSmartAccessToken;
-                    uSmartToken.ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken);
+                    uSmartToken.ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken) ?? DateTime.UtcNow;
                     uSmartToken.IsExpired = false;
                     _context.USmartTokens.Update(uSmartToken);
                 }
@@ -260,7 +261,7 @@ namespace VinhUni_Educator_API.Services
                     {
                         Token = uSmartAccessToken,
                         UserId = user.Id,
-                        ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken),
+                        ExpireDate = _jwtServices.GetTokenExpiration(uSmartAccessToken) ?? DateTime.UtcNow,
                         IsExpired = false
                     };
                     _context.USmartTokens.Add(uSmartToken);
@@ -273,6 +274,7 @@ namespace VinhUni_Educator_API.Services
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.Lax,
+                    // Domain = _configuration["API_DOMAIN"],
                     Expires = refreshTokenResponse.Expiration
                 });
                 return new ActionResponse
@@ -344,6 +346,7 @@ namespace VinhUni_Educator_API.Services
                     HttpOnly = true,
                     Secure = true,
                     SameSite = SameSiteMode.Lax,
+                    // Domain = _configuration["API_DOMAIN"],
                     Expires = newRefreshTokenResponse.Expiration
                 });
                 return new ActionResponse
@@ -378,22 +381,33 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> LogoutAsync(string accessToken, string refreshToken)
+        public async Task<ActionResponse> LogoutAsync(string? accessToken, string? refreshToken)
         {
             try
             {
-                var accessTokenClaims = _jwtServices.GetTokenClaims(accessToken);
-                var refreshTokenClaims = _jwtServices.GetTokenClaims(refreshToken);
+                var accessTokenClaims = new List<Claim>();
+                var refreshTokenClaims = new List<Claim>();
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    accessTokenClaims = _jwtServices.GetTokenClaims(accessToken);
+                }
+                if (!string.IsNullOrEmpty(refreshToken))
+                {
+                    refreshTokenClaims = _jwtServices.GetTokenClaims(refreshToken);
+                }
                 var accessTokenId = accessTokenClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
                 var refreshTokenId = refreshTokenClaims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
-                if (string.IsNullOrEmpty(accessTokenId) || string.IsNullOrEmpty(refreshTokenId))
+                if (!string.IsNullOrEmpty(accessTokenId) && !string.IsNullOrEmpty(accessToken))
                 {
-                    throw new InvalidOperationException("Không thể đăng xuất người dùng");
+                    var addRevokedToken = await _cacheServices.SetDataAsync<string>($"RevokedID:{accessTokenId}", accessToken, _jwtServices.GetRemainingExpiration(accessToken));
                 }
-                var addRevokedToken = await _cacheServices.SetDataAsync<string>($"RevokedID:{accessTokenId}", accessToken, _jwtServices.GetRemainingExpiration(accessToken));
-                var removeRefreshToken = await _cacheServices.RemoveDataAsync(refreshTokenId);
+                if (!string.IsNullOrEmpty(refreshTokenId))
+                {
+                    var removeRefreshToken = await _cacheServices.RemoveDataAsync(refreshTokenId);
+                }
                 _httpContextAccessor?.HttpContext?.Response.Cookies.Delete("refreshToken");
                 _context.RefreshTokens.RemoveRange(_context.RefreshTokens.Where(rt => rt.JwtId == refreshTokenId));
+                _context.SaveChanges();
                 return new ActionResponse
                 {
                     StatusCode = 200,
@@ -409,7 +423,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 500,
                     IsSuccess = false,
-                    Message = "Cannot logout user, please try again later or contact administrator"
+                    Message = "Không thể đăng xuất, vui lòng thử lại sau hoặc liên hệ quản trị viên"
                 };
             }
         }

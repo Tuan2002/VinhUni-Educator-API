@@ -91,6 +91,14 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _userServices.UpdateUserAsync(userId, model);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpPut]
+        [Route("reset-password/{userId}")]
+        [SwaggerOperation(Summary = "Đặt lại mật khẩu người dùng", Description = "Đặt lại mật khẩu người dùng")]
+        public async Task<IActionResult> ResetPasswordAsync(string userId, [FromBody] ResetPasswordModel model)
+        {
+            var response = await _userServices.ResetUserPasswordAsync(userId, model);
+            return StatusCode(response.StatusCode, response);
+        }
         [HttpGet]
         [Route("search")]
         [SwaggerOperation(Summary = "Tìm kiếm người dùng", Description = "Tìm kiếm người dùng")]

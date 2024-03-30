@@ -38,6 +38,8 @@ namespace VinhUni_Educator_API.Services
         public async Task<ActionResponse> SyncUserFromSSO(string token)
         {
             var APIBaseURL = _config["VinhUNISmart:API"];
+            const string TEACHER_ROLE = "2";
+            const string STUDENT_ROLE = "1";
             if (token == null || string.IsNullOrEmpty(APIBaseURL))
             {
                 return new ActionResponse
@@ -70,7 +72,7 @@ namespace VinhUni_Educator_API.Services
                 }
                 UserSyncModel userSync = JsonSerializer.Deserialize<UserSyncModel>(response?.data?.ToString()) ?? throw new Exception("Lỗi máy chủ, vui lòng thử lại sau");
                 // Create user in local database
-                string userRole = userSync.source == "2" ? AppRoles.Teacher : AppRoles.Student;
+                string userRole = userSync.source == TEACHER_ROLE ? AppRoles.Teacher : AppRoles.Student;
                 var user = new ApplicationUser
                 {
                     UserName = userSync.userName,
@@ -104,7 +106,7 @@ namespace VinhUni_Educator_API.Services
                 // Sync user info to local database
                 switch (userSync.source)
                 {
-                    case "1":
+                    case STUDENT_ROLE:
                         // Student info
                         var StudentCode = claims?.FirstOrDefault(c => c.Type == "maNguoiHoc")?.Value.ToString();
                         if (string.IsNullOrEmpty(StudentCode))
@@ -177,7 +179,7 @@ namespace VinhUni_Educator_API.Services
                             _context.Students.Update(student);
                         }
                         break;
-                    case "2":
+                    case TEACHER_ROLE:
                         // Teacher info
                         var teacherCode = claims?.FirstOrDefault(c => c.Type == "maCanBo")?.Value.ToString();
                         if (string.IsNullOrEmpty(teacherCode))
@@ -271,6 +273,7 @@ namespace VinhUni_Educator_API.Services
                     USmartId = model.USmartId,
                     FirstName = model.FirstName,
                     LastName = model.LastName,
+                    Gender = model.Gender,
                     Address = model.Address,
                     Avatar = model.Avatar,
                     DateOfBirth = model.DateOfBirth,
@@ -562,6 +565,7 @@ namespace VinhUni_Educator_API.Services
                 user.LastName = model.LastName ?? user.LastName;
                 user.Email = model.Email ?? user.Email;
                 user.PhoneNumber = model.PhoneNumber ?? user.PhoneNumber;
+                user.Gender = model.Gender ?? user.Gender;
                 user.Address = model.Address ?? user.Address;
                 user.DateOfBirth = model.DateOfBirth ?? user.DateOfBirth;
                 var response = await _userManager.UpdateAsync(user);
@@ -590,6 +594,50 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 500,
                     IsSuccess = false,
+                    Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> ResetUserPasswordAsync(string userId, ResetPasswordModel model)
+        {
+            try
+            {
+                var currentUser = await _userManager.FindByIdAsync(userId);
+                if (currentUser == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy người dùng"
+                    };
+                }
+                var token = await _userManager.GeneratePasswordResetTokenAsync(currentUser);
+                var result = await _userManager.ResetPasswordAsync(currentUser, token, model.NewPassword);
+                if (!result.Succeeded)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Không thể đặt lại mật khẩu"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Đặt lại mật khẩu thành công"
+                };
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in UserService/ResetUserPasswordAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = true,
                     Message = ex.Message
                 };
             }
