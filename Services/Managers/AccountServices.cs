@@ -70,6 +70,16 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy thông tin người dùng"
                     };
                 }
+                var checkPassword = await _userManager.CheckPasswordAsync(currentUser, model.OldPassword);
+                if (!checkPassword)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Mật khẩu đã nhập không chính xác"
+                    };
+                }
                 var response = await _userManager.ChangePasswordAsync(currentUser, model.OldPassword, model.NewPassword);
                 if (!response.Succeeded)
                 {
@@ -200,8 +210,8 @@ namespace VinhUni_Educator_API.Services
                 {
                     Expires = DateTimeOffset.UtcNow.AddMinutes(5),
                     HttpOnly = true,
-                    Secure = false,
-                    SameSite = SameSiteMode.None
+                    Secure = true,
+                    SameSite = SameSiteMode.Lax
 
                 });
                 return new ActionResponse
@@ -450,6 +460,7 @@ namespace VinhUni_Educator_API.Services
                 currentUser.FirstName = model.FirstName ?? currentUser.FirstName;
                 currentUser.LastName = model.LastName ?? currentUser.LastName;
                 currentUser.Email = model.Email ?? currentUser.Email;
+                currentUser.Gender = model.Gender ?? currentUser.Gender;
                 currentUser.PhoneNumber = model.PhoneNumber ?? currentUser.PhoneNumber;
                 currentUser.Address = model.Address ?? currentUser.Address;
                 currentUser.DateOfBirth = model.DateOfBirth ?? currentUser.DateOfBirth;
