@@ -11,6 +11,9 @@ namespace VinhUni_Educator_API.Configs
             CreateMap<RefreshToken, RefreshTokenModel>();
             CreateMap<ApplicationUser, PublicUserModel>();
             CreateMap<ApplicationUser, UserViewModel>();
+            CreateMap<Course, CourseViewModel>()
+            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
+
         }
     }
 }

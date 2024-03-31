@@ -333,8 +333,8 @@ namespace VinhUni_Educator_API.Services
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
                 // Get users with pagination
-                var result = await PageList<ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
-                var userList = new PageList<UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                var result = await PageList<ApplicationUser, ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
+                var userList = new PageList<UserViewModel, UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
                 foreach (var user in result.Items)
                 {
                     var roles = await _userManager.GetRolesAsync(user);
@@ -372,8 +372,8 @@ namespace VinhUni_Educator_API.Services
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
                 // Get deleted users with pagination
-                var result = await PageList<ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
-                var userList = new PageList<UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
+                var result = await PageList<ApplicationUser, ApplicationUser>.CreateAsync(query, pageIndex, pageSize);
+                var userList = new PageList<UserViewModel, UserViewModel>(_mapper.Map<List<UserViewModel>>(result.Items), result.TotalCount, result.PageIndex, result.PageSize);
                 foreach (var user in result.Items)
                 {
                     var roles = await _userManager.GetRolesAsync(user);
@@ -408,13 +408,13 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
+                if (user == null || user.IsDeleted == true)
                 {
                     return new ActionResponse
                     {
                         StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
-                        Message = "Không tìm thấy người dùng"
+                        Message = "Người dùng không tồn tại hoặc đã bị xóa"
                     };
                 }
                 user.IsDeleted = true;
@@ -444,7 +444,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
+                if (user == null || user.IsDeleted == false)
                 {
                     return new ActionResponse
                     {
@@ -480,13 +480,13 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var user = await _userManager.FindByIdAsync(userId);
-                if (user == null)
+                if (user == null || user.IsDeleted == true)
                 {
                     return new ActionResponse
                     {
                         StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
-                        Message = "Không tìm thấy người dùng"
+                        Message = "Không tìm thấy người dùng hoặc người dùng đã bị xóa"
                     };
                 }
                 var roles = await _userManager.GetRolesAsync(user);
@@ -516,13 +516,13 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var user = await _userManager.FindByNameAsync(userName);
-                if (user == null)
+                if (user == null || user.IsDeleted == true)
                 {
                     return new ActionResponse
                     {
                         StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
-                        Message = "Không tìm thấy người dùng"
+                        Message = "Không tìm thấy người dùng hoặc người dùng đã bị xóa"
                     };
                 }
                 var roles = await _userManager.GetRolesAsync(user);
@@ -652,6 +652,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     query = query.Where(u => u.FirstName != null && u.FirstName.Contains(searchKey) || u.LastName != null && u.LastName.Contains(searchKey) || u.UserName != null && u.UserName.Contains(searchKey));
                 }
+                query = query.Where(u => u.IsDeleted == false || u.IsDeleted == null);
                 query = query.Take(searchResultCount);
                 var result = await query.ToListAsync();
                 var totalCount = result.Count;

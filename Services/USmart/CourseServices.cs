@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using VinhUni_Educator_API.Configs;
@@ -7,6 +8,7 @@ using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
 using VinhUni_Educator_API.Interfaces;
+using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Models.USmart;
 using VinhUni_Educator_API.Utils;
 
@@ -19,13 +21,18 @@ namespace VinhUni_Educator_API.Services
         private readonly ILogger<CourseServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public CourseServices(ApplicationDBContext context, IConfiguration config, ILogger<CourseServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        private readonly IMapper _mapper;
+        public const int DEFAULT_PAGE_SIZE = 10;
+        public const int DEFAULT_PAGE_INDEX = 1;
+        public const int DEFAULT_SEARCH_RESULT = 10;
+        public CourseServices(ApplicationDBContext context, IConfiguration config, ILogger<CourseServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices, IMapper mapper)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;
             _config = config;
             _logger = logger;
             _jwtServices = jwtServices;
+            _mapper = mapper;
         }
         public async Task<ActionResponse> SyncCoursesAsync()
         {
@@ -120,7 +127,7 @@ namespace VinhUni_Educator_API.Services
                             CourseCode = item.code,
                             CourseName = item.ten,
                             StartYear = item.namBatDau,
-                            CreatedBy = userId,
+                            CreatedById = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
                         await _context.Courses.AddAsync(course);
@@ -154,6 +161,176 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = 500,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi đồng bộ khoá đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetCoursesAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                var query = _context.Courses.AsQueryable();
+                query = query.Where(c => c.IsDeleted == false);
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var listCourse = await PageList<Course, CourseViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = listCourse
+                };
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting courses: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách khoá đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetCourseByIdAsync(int courseId)
+        {
+            try
+            {
+                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+                if (course is null || course.IsDeleted == true)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khoá đào tạo hoặc khoá đào tạo đã bị xóa"
+                    };
+                }
+                var courseModel = _mapper.Map<CourseViewModel>(course);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = courseModel
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting course by id: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin khoá đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> DeleteCourseAsync(int courseId)
+        {
+            try
+            {
+                var course = _context.Courses.FirstOrDefault(c => c.Id == courseId && c.IsDeleted == false);
+                if (course is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khoá đào tạo"
+                    };
+                }
+                course.IsDeleted = true;
+                course.DeletedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Xóa khoá đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while deleting course: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi xóa khoá đào tạo, vui lòng thử lại sau!"
+                };
+            }
+
+        }
+        public async Task<ActionResponse> RestoreCourseAsync(int courseId)
+        {
+            try
+            {
+                var course = _context.Courses.FirstOrDefault(c => c.Id == courseId && c.IsDeleted == true);
+                if (course is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khoá đào tạo"
+                    };
+                }
+                course.IsDeleted = false;
+                course.DeletedAt = null;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Khôi phục khoá đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while restoring course: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi khôi phục khoá đào tạo, vui lòng thử lại sau!"
+                };
+            }
+        }
+        public async Task<ActionResponse> SearchCourseAsync(string keyword, int? limit)
+        {
+            try
+            {
+                var searchLimit = limit ?? DEFAULT_SEARCH_RESULT;
+                var query = _context.Courses.AsQueryable();
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    query = query.Where(c => c.CourseCode.Contains(keyword) || c.CourseName.Contains(keyword));
+                }
+                query = query.Where(c => c.IsDeleted == false);
+                query = query.OrderBy(c => c.CourseCode);
+                var response = await query.Take(searchLimit).ToListAsync();
+                var listCourse = _mapper.Map<List<CourseViewModel>>(response);
+                var TotalCount = listCourse.Count;
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = $"Tìm thấy {TotalCount} khoá đào tạo",
+                    Data = new
+                    {
+                        listCourse,
+                        TotalCount
+                    }
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while searching courses: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi tìm kiếm khoá đào tạo"
                 };
             }
         }
