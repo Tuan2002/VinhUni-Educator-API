@@ -5,5 +5,10 @@ namespace VinhUni_Educator_API.Interfaces
     public interface ICourseServices
     {
         Task<ActionResponse> SyncCoursesAsync();
+        Task<ActionResponse> GetCoursesAsync(int? pageIndex, int? limit);
+        Task<ActionResponse> GetCourseByIdAsync(int courseDd);
+        Task<ActionResponse> DeleteCourseAsync(int courseId);
+        Task<ActionResponse> RestoreCourseAsync(int courseId);
+        Task<ActionResponse> SearchCourseAsync(string keyword, int? limit);
     }
 }
