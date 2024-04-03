@@ -13,7 +13,8 @@ namespace VinhUni_Educator_API.Configs
             CreateMap<ApplicationUser, UserViewModel>();
             CreateMap<Course, CourseViewModel>()
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
-
+            CreateMap<Major, MajorViewModel>()
+            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
         }
     }
 }

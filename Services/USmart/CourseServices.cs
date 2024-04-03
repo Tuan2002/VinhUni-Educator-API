@@ -296,6 +296,42 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> UpdateCourseAsync(int courseId, UpdateCourseModel model)
+        {
+            try
+            {
+                var course = _context.Courses.FirstOrDefault(c => c.Id == courseId && c.IsDeleted == false);
+                if (course is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khoá đào tạo"
+                    };
+                }
+                course.CourseCode = model.CourseCode ?? course.CourseCode;
+                course.CourseName = model.CourseName ?? course.CourseName;
+                course.StartYear = model.StartYear ?? course.StartYear;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Cập nhật thông tin khoá đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while updating course: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi cập nhật thông tin khoá đào tạo, vui lòng thử lại sau!"
+                };
+            }
+        }
         public async Task<ActionResponse> SearchCourseAsync(string keyword, int? limit)
         {
             try
