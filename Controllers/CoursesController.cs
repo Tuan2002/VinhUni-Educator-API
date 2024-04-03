@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using VinhUni_Educator_API.Interfaces;
+using VinhUni_Educator_API.Models;
 
 namespace VinhUni_Educator_API.Controllers
 {
@@ -57,6 +58,18 @@ namespace VinhUni_Educator_API.Controllers
         public async Task<IActionResult> RestoreCourseAsync(int courseId)
         {
             var response = await _courseServices.RestoreCourseAsync(courseId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("update-course/{courseId}")]
+        [SwaggerOperation(Summary = "Cập nhật thông tin khóa học", Description = "Cập nhật thông tin khóa học")]
+        public async Task<IActionResult> UpdateCourseAsync(int courseId, [FromBody] UpdateCourseModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+            var response = await _courseServices.UpdateCourseAsync(courseId, model);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]

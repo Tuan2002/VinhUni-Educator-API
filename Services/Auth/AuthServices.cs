@@ -247,6 +247,7 @@ namespace VinhUni_Educator_API.Services
                     IsRevoked = false,
                     UserId = user.Id
                 };
+                await _context.Database.BeginTransactionAsync();
                 var uSmartToken = _context.USmartTokens.Where(ut => ut.UserId == user.Id).FirstOrDefault();
                 if (uSmartToken != null)
                 {
@@ -268,7 +269,8 @@ namespace VinhUni_Educator_API.Services
                 }
                 var saveCache = await _cacheServices.SetDataAsync<RefreshToken>(refreshTokenResponse.TokenId, userRefreshToken, new DateTimeOffset(refreshTokenResponse.Expiration));
                 _context.RefreshTokens.Add(userRefreshToken);
-                _context.SaveChanges();
+                await _context.SaveChangesAsync();
+                await _context.Database.CommitTransactionAsync();
                 _httpContextAccessor?.HttpContext?.Response.Cookies.Append("refreshToken", refreshTokenResponse.Token, new CookieOptions
                 {
                     HttpOnly = true,
@@ -291,6 +293,7 @@ namespace VinhUni_Educator_API.Services
             }
             catch (Exception e)
             {
+                _context.Database.RollbackTransaction();
                 _logger.LogError($"Error occurred while logging in: {e.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
