@@ -14,9 +14,9 @@ namespace VinhUni_Educator_API.Entities
         public float? MinTrainingYears { get; set; }
         public float? MaxTrainingYears { get; set; }
         [ForeignKey("User")]
-        public string CreatedBy { get; set; } = null!;
+        public string CreatedById { get; set; } = null!;
+        public virtual ApplicationUser CreatedBy { get; set; } = null!;
         public DateTime? CreatedAt { get; set; }
-        public virtual ApplicationUser User { get; set; } = null!;
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
         public string? DeletedBy { get; set; }

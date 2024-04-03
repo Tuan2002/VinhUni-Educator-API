@@ -1,3 +1,4 @@
+using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Utils;
 
 namespace VinhUni_Educator_API.Interfaces
@@ -9,6 +10,7 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> GetCourseByIdAsync(int courseDd);
         Task<ActionResponse> DeleteCourseAsync(int courseId);
         Task<ActionResponse> RestoreCourseAsync(int courseId);
+        Task<ActionResponse> UpdateCourseAsync(int courseId, UpdateCourseModel model);
         Task<ActionResponse> SearchCourseAsync(string keyword, int? limit);
     }
 }
