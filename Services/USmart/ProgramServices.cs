@@ -1,6 +1,6 @@
-
 using System.Security.Claims;
 using System.Text.Json;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using VinhUni_Educator_API.Configs;
@@ -20,13 +20,18 @@ namespace VinhUni_Educator_API.Services
         private readonly ILogger<ProgramServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public ProgramServices(ApplicationDBContext context, IConfiguration config, ILogger<ProgramServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        private readonly IMapper _mapper;
+        public const int DEFAULT_PAGE_SIZE = 10;
+        public const int DEFAULT_PAGE_INDEX = 1;
+        public const int DEFAULT_SEARCH_RESULT = 10;
+        public ProgramServices(ApplicationDBContext context, IConfiguration config, ILogger<ProgramServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices, IMapper mapper)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;
             _config = config;
             _logger = logger;
             _jwtServices = jwtServices;
+            _mapper = mapper;
         }
         public async Task<ActionResponse> SyncProgramsAsync()
         {
@@ -130,7 +135,7 @@ namespace VinhUni_Educator_API.Services
                             StartYear = item.namBatDau,
                             TrainingYears = item.soNamDaoTao,
                             MaxTrainingYears = item.soNamDaoTaoToiDa,
-                            CreatedBy = userId,
+                            CreatedById = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
                         await _context.TrainingPrograms.AddAsync(program);
@@ -172,6 +177,278 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-
+        public async Task<ActionResponse> GetProgramsAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var query = _context.TrainingPrograms.AsQueryable();
+                query = query.Where(p => p.IsDeleted == false);
+                var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = programList,
+                    Message = "Lấy danh sách chương trình đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting training programs: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetProgramByIdAsync(int programId)
+        {
+            try
+            {
+                var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+                if (program is null || program.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy chương trình đào tạo hoặc chương trình đã bị xóa"
+                    };
+                }
+                var programViewModel = _mapper.Map<ProgramViewModel>(program);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = programViewModel,
+                    Message = "Lấy thông tin chương trình đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting training program by id: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> DeleteProgramAsync(int programId)
+        {
+            try
+            {
+                var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+                if (program is null || program.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy chương trình đào tạo hoặc chương trình đã bị xóa"
+                    };
+                }
+                program.IsDeleted = true;
+                program.DeletedAt = DateTime.UtcNow;
+                program.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Xóa chương trình đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while deleting training program: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi xóa chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> RestoreProgramAsync(int programId)
+        {
+            try
+            {
+                var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+                if (program is null || !program.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy chương trình đào tạo"
+                    };
+                }
+                program.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Khôi phục chương trình đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while restoring training program: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi khôi phục chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> UpdateProgramAsync(int programId, UpdateProgramModel model)
+        {
+            try
+            {
+                var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+                if (program is null || program.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy chương trình đào tạo hoặc chương trình đã bị xóa"
+                    };
+                }
+                var major = await _context.Majors.FirstOrDefaultAsync(m => m.Id == model.MajorId);
+                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == model.CourseId);
+                if (major is null || course is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy ngành hoặc khóa học"
+                    };
+                }
+                program.ProgramCode = model.ProgramCode ?? program.ProgramCode;
+                program.ProgramName = model.ProgramName ?? program.ProgramName;
+                program.MajorId = model.MajorId ?? program.MajorId;
+                program.CourseId = model.CourseId ?? program.CourseId;
+                program.CreditHours = model.CreditHours ?? program.CreditHours;
+                program.StartYear = model.StartYear ?? program.StartYear;
+                program.TrainingYears = model.TrainingYears ?? program.TrainingYears;
+                program.MaxTrainingYears = model.MaxTrainingYears ?? program.MaxTrainingYears;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Cập nhật chương trình đào tạo thành công",
+                    Data = _mapper.Map<ProgramViewModel>(program)
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while updating training program: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi cập nhật chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetProgramsByMajorAsync(int majorId, int? pageIndex, int? limit)
+        {
+            try
+            {
+                int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var query = _context.TrainingPrograms.AsQueryable();
+                query = query.Where(p => p.MajorId == majorId && p.IsDeleted == false);
+                var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = programList,
+                    Message = "Lấy danh sách chương trình đào tạo theo ngành học thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting training programs by major: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách chương trình đào tạo theo ngành học, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetProgramsByCourseAsync(int courseId, int? pageIndex, int? limit)
+        {
+            try
+            {
+                int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var query = _context.TrainingPrograms.AsQueryable();
+                query = query.Where(p => p.CourseId == courseId && p.IsDeleted == false);
+                var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = programList,
+                    Message = "Lấy danh sách chương trình đào tạo theo khóa học thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting training programs by course: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách chương trình đào tạo theo khóa học, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> SearchProgramsAsync(string searchKey, int? limit)
+        {
+            try
+            {
+                int currentLimit = limit ?? DEFAULT_SEARCH_RESULT;
+                var query = _context.TrainingPrograms.AsQueryable();
+                if (!string.IsNullOrEmpty(searchKey))
+                {
+                    query = query.Where(p => p.ProgramCode.Contains(searchKey) || p.ProgramName.Contains(searchKey));
+                }
+                query = query.Where(p => p.IsDeleted == false);
+                var response = await query.Take(currentLimit).ToListAsync();
+                var programList = _mapper.Map<List<ProgramViewModel>>(response);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = programList,
+                    Message = "Tìm kiếm chương trình đào tạo thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while searching training programs: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi tìm kiếm chương trình đào tạo, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
     }
 }

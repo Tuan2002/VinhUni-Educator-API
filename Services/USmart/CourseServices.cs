@@ -241,6 +241,7 @@ namespace VinhUni_Educator_API.Services
                 }
                 course.IsDeleted = true;
                 course.DeletedAt = DateTime.UtcNow;
+                course.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -318,7 +319,8 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Message = "Cập nhật thông tin khoá đào tạo thành công"
+                    Message = "Cập nhật thông tin khoá đào tạo thành công",
+                    Data = _mapper.Map<CourseViewModel>(course)
                 };
             }
             catch (Exception e)
