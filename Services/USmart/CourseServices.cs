@@ -192,6 +192,34 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetDeletedCoursesAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                var query = _context.Courses.AsQueryable();
+                query = query.Where(c => c.IsDeleted == true);
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var listCourse = await PageList<Course, CourseViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = listCourse
+                };
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting deleted courses: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách khoá đào tạo đã xóa, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
         public async Task<ActionResponse> GetCourseByIdAsync(int courseId)
         {
             try
