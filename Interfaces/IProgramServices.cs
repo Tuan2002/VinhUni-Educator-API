@@ -7,6 +7,7 @@ namespace VinhUni_Educator_API.Interfaces
     {
         Task<ActionResponse> SyncProgramsAsync();
         Task<ActionResponse> GetProgramsAsync(int? pageIndex, int? limit);
+        Task<ActionResponse> GetDeletedProgramsAsync(int? pageIndex, int? limit);
         Task<ActionResponse> GetProgramByIdAsync(int programId);
         Task<ActionResponse> DeleteProgramAsync(int programId);
         Task<ActionResponse> RestoreProgramAsync(int programId);

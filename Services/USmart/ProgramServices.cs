@@ -205,6 +205,34 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetDeletedProgramsAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var query = _context.TrainingPrograms.AsQueryable();
+                query = query.Where(p => p.IsDeleted == true);
+                var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = programList,
+                    Message = "Lấy danh sách chương trình đào tạo đã xóa thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting deleted training programs: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách chương trình đào tạo đã xóa, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
         public async Task<ActionResponse> GetProgramByIdAsync(int programId)
         {
             try
@@ -368,6 +396,16 @@ namespace VinhUni_Educator_API.Services
             {
                 int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var major = await _context.Majors.FirstOrDefaultAsync(m => m.Id == majorId);
+                if (major is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy ngành học"
+                    };
+                }
                 var query = _context.TrainingPrograms.AsQueryable();
                 query = query.Where(p => p.MajorId == majorId && p.IsDeleted == false);
                 var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
@@ -396,6 +434,16 @@ namespace VinhUni_Educator_API.Services
             {
                 int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+                if (course is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khóa học"
+                    };
+                }
                 var query = _context.TrainingPrograms.AsQueryable();
                 query = query.Where(p => p.CourseId == courseId && p.IsDeleted == false);
                 var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);

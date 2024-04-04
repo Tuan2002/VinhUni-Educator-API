@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using AutoMapper;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using VinhUni_Educator_API.Configs;
@@ -19,13 +20,18 @@ namespace VinhUni_Educator_API.Services
         private readonly ILogger<PrimaryClassServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
-        public PrimaryClassServices(ApplicationDBContext context, IConfiguration config, ILogger<PrimaryClassServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices)
+        private readonly IMapper _mapper;
+        public const int DEFAULT_PAGE_SIZE = 10;
+        public const int DEFAULT_PAGE_INDEX = 1;
+        public const int DEFAULT_SEARCH_RESULT = 10;
+        public PrimaryClassServices(ApplicationDBContext context, IConfiguration config, ILogger<PrimaryClassServices> logger, IHttpContextAccessor contextAccessor, IJwtServices jwtServices, IMapper mapper)
         {
             _httpContextAccessor = contextAccessor;
             _context = context;
             _config = config;
             _logger = logger;
             _jwtServices = jwtServices;
+            _mapper = mapper;
         }
         public async Task<ActionResponse> SyncPrimaryClassesAsync()
         {
@@ -120,7 +126,7 @@ namespace VinhUni_Educator_API.Services
                             ClassName = item.ten,
                             ProgramId = program.Id,
                             CourseId = course.Id,
-                            CreatedBy = userId,
+                            CreatedById = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
 
@@ -160,6 +166,311 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = 500,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi đồng bộ lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetPrimaryClassesAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var query = _context.PrimaryClasses.AsQueryable();
+                query = query.Where(cls => cls.IsDeleted == false);
+                var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lớp hành chính thành công",
+                    Data = classList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting primary classes: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetDeletedPrimaryClassesAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var query = _context.PrimaryClasses.AsQueryable();
+                query = query.Where(cls => cls.IsDeleted == true);
+                var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lớp hành chính đã xóa thành công",
+                    Data = classList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting deleted primary classes: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lớp hành chính đã xóa, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetPrimaryClassByIdAsync(int classId)
+        {
+            try
+            {
+                var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(cls => cls.Id == classId && cls.IsDeleted == false);
+                if (primaryClass is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy lớp hành chính hoặc lớp hành chính đã bị xóa"
+                    };
+                }
+                var classViewModel = _mapper.Map<ClassViewModel>(primaryClass);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin lớp hành chính thành công",
+                    Data = classViewModel
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting primary class by id: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> DeletePrimaryClassAsync(int classId)
+        {
+            try
+            {
+                var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(cls => cls.Id == classId);
+                if (primaryClass is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy lớp hành chính"
+                    };
+                }
+                primaryClass.IsDeleted = true;
+                primaryClass.DeletedAt = DateTime.UtcNow;
+                primaryClass.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Xóa lớp hành chính thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while deleting primary class: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi xóa lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> RestorePrimaryClassAsync(int classId)
+        {
+            try
+            {
+                var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(cls => cls.Id == classId && cls.IsDeleted == true);
+                if (primaryClass is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy lớp hành chính"
+                    };
+                }
+                primaryClass.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Khôi phục lớp hành chính thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while restoring primary class: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi khôi phục lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> UpdatePrimaryClassAsync(int classId, UpdateClassModel model)
+        {
+            try
+            {
+                var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(cls => cls.Id == classId && cls.IsDeleted == false);
+                if (primaryClass is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy lớp hành chính hoặc lớp hành chính đã bị xóa"
+                    };
+                }
+                primaryClass.ClassCode = model.ClassCode ?? primaryClass.ClassCode;
+                primaryClass.ClassName = model.ClassName ?? primaryClass.ClassName;
+                primaryClass.ProgramId = model.ProgramId ?? primaryClass.ProgramId;
+                primaryClass.CourseId = model.CourseId ?? primaryClass.CourseId;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Cập nhật thông tin lớp hành chính thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while updating primary class: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi cập nhật thông tin lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetPrimaryClassesByProgramAsync(int programId, int? pageIndex, int? limit)
+        {
+            try
+            {
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+                if (program is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy chương trình đào tạo"
+                    };
+                }
+                var query = _context.PrimaryClasses.AsQueryable();
+                query = query.Where(cls => cls.ProgramId == programId && cls.IsDeleted == false);
+                var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lớp hành chính thành công",
+                    Data = classList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting primary classes by program: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetPrimaryClassesByCourseAsync(int courseId, int? pageIndex, int? limit)
+        {
+            try
+            {
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == courseId);
+                if (course is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 404,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khóa học"
+                    };
+                }
+                var query = _context.PrimaryClasses.AsQueryable();
+                query = query.Where(cls => cls.CourseId == courseId && cls.IsDeleted == false);
+                var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lớp hành chính thành công",
+                    Data = classList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting primary classes by course: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> SearchPrimaryClassesAsync(string keyword, int? limit)
+        {
+            try
+            {
+                var currentLimit = limit ?? DEFAULT_SEARCH_RESULT;
+                var query = _context.PrimaryClasses.AsQueryable();
+                if (!string.IsNullOrEmpty(keyword))
+                {
+                    query = query.Where(cls => cls.ClassCode.Contains(keyword) || cls.ClassName.Contains(keyword) && cls.IsDeleted == false);
+                }
+                query = query.OrderByDescending(cls => cls.CreatedAt);
+                var response = await query.Take(currentLimit).ToListAsync();
+                var classList = _mapper.Map<List<ClassViewModel>>(response);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Message = "Tìm kiếm lớp hành chính thành công",
+                    Data = classList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while searching primary classes: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi tìm kiếm lớp hành chính, vui lòng thử lại sau hoặc liên hệ quản trị viên"
                 };
             }
         }
