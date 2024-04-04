@@ -186,6 +186,33 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetDeletedMajorsAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                var query = _context.Majors.AsQueryable();
+                query = query.Where(m => m.IsDeleted == true);
+                var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
+                var majorList = await PageList<Major, MajorViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = 200,
+                    IsSuccess = true,
+                    Data = majorList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting deleted majors: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách ngành học đã xóa, vui lòng thử lại sau hoặc liên hệ quản trị viên"
+                };
+            }
+        }
         public async Task<ActionResponse> GetMajorByIdAsync(int majorId)
         {
             try

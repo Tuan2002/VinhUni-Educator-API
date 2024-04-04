@@ -38,6 +38,14 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
+        [Route("get-deleted-majors")]
+        [SwaggerOperation(Summary = "Lấy danh sách ngành học đã xóa", Description = "Lấy danh sách ngành học đã xóa khỏi hệ thống")]
+        public async Task<IActionResult> GetDeletedMajorsAsync([FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        {
+            var response = await _majorServices.GetDeletedMajorsAsync(pageIndex, limit);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
         [Route("get-major/{majorId}")]
         [SwaggerOperation(Summary = "Lấy thông tin ngành học", Description = "Lấy thông tin ngành học từ hệ thống")]
         public async Task<IActionResult> GetMajorByIdAsync(int majorId)

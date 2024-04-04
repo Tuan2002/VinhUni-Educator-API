@@ -7,6 +7,7 @@ namespace VinhUni_Educator_API.Interfaces
     {
         Task<ActionResponse> SyncMajorAsync();
         Task<ActionResponse> GetMajorsAsync(int? pageIndex, int? limit);
+        Task<ActionResponse> GetDeletedMajorsAsync(int? pageIndex, int? limit);
         Task<ActionResponse> GetMajorByIdAsync(int majorId);
         Task<ActionResponse> DeleteMajorAsync(int majorId);
         Task<ActionResponse> UpdateMajorAsync(int majorId, UpdateMajorModel model);

@@ -38,6 +38,14 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
+        [Route("get-deleted-programs")]
+        [SwaggerOperation(Summary = "Lấy danh sách chương trình đào tạo đã xóa", Description = "Lấy danh sách chương trình đào tạo đã xóa khỏi hệ thống")]
+        public async Task<IActionResult> GetDeletedProgramsAsync([FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        {
+            var response = await _programServices.GetDeletedProgramsAsync(pageIndex, limit);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
         [Route("get-program/{programId}")]
         [SwaggerOperation(Summary = "Lấy thông tin chương trình đào tạo", Description = "Lấy thông tin chương trình đào tạo từ hệ thống")]
         public async Task<IActionResult> GetProgramByIdAsync(int programId)
