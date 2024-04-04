@@ -315,7 +315,8 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Message = "Cập nhật thông tin ngành học thành công"
+                    Message = "Cập nhật thông tin ngành học thành công",
+                    Data = _mapper.Map<MajorViewModel>(major)
                 };
             }
             catch (Exception e)
