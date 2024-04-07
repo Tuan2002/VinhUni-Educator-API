@@ -23,6 +23,8 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.ProgramName, opt => opt.MapFrom(src => src.Program.ProgramName))
             .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Course.CourseName))
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
+            CreateMap<Organization, OrganizationViewModel>()
+            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
         }
     }
 }
