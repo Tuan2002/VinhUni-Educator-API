@@ -1,4 +1,5 @@
 
+using VinhUni_Educator_API.Models;
 using VinhUni_Educator_API.Utils;
 
 namespace VinhUni_Educator_API.Interfaces
@@ -6,9 +7,12 @@ namespace VinhUni_Educator_API.Interfaces
     public interface IOrganizationServices
     {
         Task<ActionResponse> SyncOrganizationsAsync();
-        // Task<ActionResponse> UpdateOrganizationAsync(int id, OrganizationModel model);
-        // Task<ActionResponse> DeleteOrganizationAsync(int id);
-        // Task<ActionResponse> GetOrganizationAsync(int id);
-        // Task<ActionResponse> GetAllOrganizationsAsync();
+        Task<ActionResponse> GetOrganizationsAsync(int? pageIndex, int? limit);
+        Task<ActionResponse> GetOrganizationByIdAsync(int organizationId);
+        Task<ActionResponse> GetDeletedOrganizationsAsync(int? pageIndex, int? limit);
+        Task<ActionResponse> DeleteOrganizationAsync(int organizationId);
+        Task<ActionResponse> UpdateOrganizationAsync(int organizationId, UpdateOrganizationModel model);
+        Task<ActionResponse> RestoreOrganizationAsync(int organizationId);
+        Task<ActionResponse> SearchOrganizationsAsync(string? searchKey, int? limit);
     }
 }

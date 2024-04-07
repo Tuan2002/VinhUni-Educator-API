@@ -198,6 +198,7 @@ namespace VinhUni_Educator_API.Services
             {
                 var query = _context.Courses.AsQueryable();
                 query = query.Where(c => c.IsDeleted == true);
+                query = query.OrderByDescending(c => c.DeletedAt);
                 var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
                 var listCourse = await PageList<Course, CourseViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);

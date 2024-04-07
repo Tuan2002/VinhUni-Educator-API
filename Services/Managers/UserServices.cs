@@ -369,6 +369,7 @@ namespace VinhUni_Educator_API.Services
             {
                 var query = _userManager.Users.AsQueryable();
                 query = query.Where(u => u.IsDeleted == true);
+                query = query.OrderByDescending(u => u.DeletedAt);
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
                 // Get deleted users with pagination
