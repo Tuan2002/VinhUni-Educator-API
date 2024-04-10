@@ -3,6 +3,7 @@ namespace VinhUni_Educator_API.Configs
 {
     public static class SyncActionList
     {
+        public const int SYNC_TIME_OUT = 10;
         public const string SyncCourse = "Đồng bộ danh sách khóa học";
         public const string SyncMajor = "Đồng bộ danh sách ngành học";
         public const string SyncSubject = "Đồng bộ danh sách môn học";
