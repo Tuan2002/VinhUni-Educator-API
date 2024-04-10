@@ -115,6 +115,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 // Update or insert training course to database
+                // var importableCourse = listCourse.Where(c => !_context.Courses.Any(o => o.CourseId == c.id)).ToList();
                 int countNewCourse = 0;
                 foreach (var item in listCourse)
                 {
@@ -170,6 +171,7 @@ namespace VinhUni_Educator_API.Services
             {
                 var query = _context.Courses.AsQueryable();
                 query = query.Where(c => c.IsDeleted == false);
+                query = query.OrderByDescending(c => c.CreatedAt);
                 var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
                 var listCourse = await PageList<Course, CourseViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
