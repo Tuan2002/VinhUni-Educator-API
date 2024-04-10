@@ -51,9 +51,9 @@ namespace VinhUni_Educator_API.Services
             {
                 // Check if the last sync action is within 30 minutes
                 var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncOrganization);
-                if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
+                if (lastSync != null && lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) > DateTime.UtcNow)
                 {
-                    var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
+                    var remainingTime = (lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) - DateTime.UtcNow).Minutes;
                     return new ActionResponse
                     {
                         StatusCode = 400,
@@ -111,6 +111,12 @@ namespace VinhUni_Educator_API.Services
                         };
                         await _context.Organizations.AddAsync(organization);
                         countNewOrganization++;
+                    }
+                    else
+                    {
+                        organization.OrganizationCode = org.code;
+                        organization.OrganizationName = org.name;
+                        _context.Organizations.Update(organization);
                     }
                 }
                 // Log sync action
@@ -312,6 +318,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var organization = await _context.Organizations.FirstOrDefaultAsync(o => o.Id == organizationId);
+                var existsOrganizationCode = await _context.Organizations.AnyAsync(o => o.OrganizationCode == model.OrganizationCode && o.Id != organizationId);
                 if (organization is null || organization.IsDeleted == true)
                 {
                     return new ActionResponse
@@ -319,6 +326,15 @@ namespace VinhUni_Educator_API.Services
                         StatusCode = 404,
                         IsSuccess = false,
                         Message = "Không tìm thấy đơn vị hoặc đơn vị đã bị xóa"
+                    };
+                }
+                if (existsOrganizationCode)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Mã đơn vị đã tồn tại"
                     };
                 }
                 organization.OrganizationCode = model.OrganizationCode ?? organization.OrganizationCode;
