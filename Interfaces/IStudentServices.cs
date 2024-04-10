@@ -8,5 +8,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> GetStudentsAsync(int? pageIndex, int? limit);
         Task<ActionResponse> GetAImportableStudentsByClassAsync(int classId);
         Task<ActionResponse> ImportStudentByClass(int classId, List<ImportStudentModel> students);
+        Task<ActionResponse> GetStudentByClassAsync(int classId);
     }
 }

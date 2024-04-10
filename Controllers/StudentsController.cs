@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -11,7 +7,7 @@ using VinhUni_Educator_API.Models;
 namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
-    // [Authorize]
+    [Authorize]
     [Route("api/[controller]")]
     [SwaggerTag("Quản lý danh sách sinh viên")]
     public class StudentsController : ControllerBase
@@ -50,6 +46,13 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _studentServices.ImportStudentByClass(classId, students);
             return StatusCode(response.StatusCode, response);
         }
-
+        [HttpGet]
+        [Route("get-students-by-class/{classId}")]
+        [SwaggerOperation(Summary = "Lấy danh sách sinh viên theo lớp hành chính", Description = "Lấy danh sách sinh viên theo lớp hành chính")]
+        public async Task<IActionResult> GetStudentsByClass(int classId)
+        {
+            var response = await _studentServices.GetStudentByClassAsync(classId);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }

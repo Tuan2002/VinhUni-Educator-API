@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
@@ -256,6 +257,46 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi nhập sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentByClassAsync(int classId)
+        {
+            try
+            {
+                var primaryClass = _context.PrimaryClasses.FirstOrDefault(x => x.Id == classId);
+                if (primaryClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy lớp học này trong hệ thống"
+                    };
+                }
+                var rawStudents = await _context.Students.Where(x => x.ClassId == classId && x.IsDeleted == false).ToListAsync();
+                var students = _mapper.Map<List<StudentViewModel>>(rawStudents);
+                int countStudent = students.Count;
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách sinh viên thành công",
+                    Data = new
+                    {
+                        Students = students,
+                        TotalStudent = countStudent
+                    }
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting students: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách sinh viên, vui lòng thử lại sau",
                 };
             }
         }
