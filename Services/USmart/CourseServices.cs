@@ -50,9 +50,9 @@ namespace VinhUni_Educator_API.Services
             {
                 //Check if the last sync action is within 30 minutes
                 var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncCourse);
-                if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
+                if (lastSync != null && lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) > DateTime.UtcNow)
                 {
-                    var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
+                    var remainingTime = (lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) - DateTime.UtcNow).Minutes;
                     return new ActionResponse
                     {
                         StatusCode = 400,
@@ -133,6 +133,13 @@ namespace VinhUni_Educator_API.Services
                         };
                         await _context.Courses.AddAsync(course);
                         countNewCourse++;
+                    }
+                    else
+                    {
+                        course.CourseCode = item.code;
+                        course.CourseName = item.ten;
+                        course.StartYear = item.namBatDau;
+                        _context.Courses.Update(course);
                     }
                 }
                 // Log sync action
@@ -333,6 +340,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var course = _context.Courses.FirstOrDefault(c => c.Id == courseId && c.IsDeleted == false);
+                var existsCourseCode = await _context.Courses.AnyAsync(c => c.CourseCode == model.CourseCode && c.Id != courseId);
                 if (course is null)
                 {
                     return new ActionResponse
@@ -340,6 +348,15 @@ namespace VinhUni_Educator_API.Services
                         StatusCode = 404,
                         IsSuccess = false,
                         Message = "Không tìm thấy khoá đào tạo"
+                    };
+                }
+                if (existsCourseCode)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Mã khoá đào tạo đã tồn tại"
                     };
                 }
                 course.CourseCode = model.CourseCode ?? course.CourseCode;

@@ -49,9 +49,9 @@ namespace VinhUni_Educator_API.Services
             {
                 // Check if the last sync action is within 30 minutes
                 var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncMajor);
-                if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
+                if (lastSync != null && lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) > DateTime.UtcNow)
                 {
-                    var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
+                    var remainingTime = (lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) - DateTime.UtcNow).Minutes;
                     return new ActionResponse
                     {
                         StatusCode = 400,
@@ -127,6 +127,14 @@ namespace VinhUni_Educator_API.Services
                         };
                         await _context.Majors.AddAsync(major);
                         countNewMajor++;
+                    }
+                    else
+                    {
+                        major.MajorCode = item.nganH_Ma;
+                        major.MajorName = item.nganH_Ten;
+                        major.MinTrainingYears = item.nganH_ThoiGianToiThieu;
+                        major.MaxTrainingYears = item.nganH_ThoiGianToiDa;
+                        _context.Majors.Update(major);
                     }
                 }
                 // Log sync action
@@ -325,6 +333,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var major = await _context.Majors.FirstOrDefaultAsync(m => m.Id == majorId);
+                var existsMajorCode = await _context.Majors.AnyAsync(m => m.MajorCode == model.MajorCode && m.Id != majorId);
                 if (major is null || major.IsDeleted == true)
                 {
                     return new ActionResponse
@@ -334,6 +343,16 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy ngành học hoặc ngành học đã bị xóa"
                     };
                 }
+                if (existsMajorCode)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Mã ngành học đã tồn tại"
+                    };
+                }
+
                 major.MajorCode = model.MajorCode ?? major.MajorCode;
                 major.MajorName = model.MajorName ?? major.MajorName;
                 major.MinTrainingYears = model.MinTrainingYears ?? major.MinTrainingYears;

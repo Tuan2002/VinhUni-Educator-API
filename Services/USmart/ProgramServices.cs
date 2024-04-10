@@ -49,9 +49,9 @@ namespace VinhUni_Educator_API.Services
             {
                 //Check if the last sync action is within 30 minutes
                 var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncTrain);
-                if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
+                if (lastSync != null && lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) > DateTime.UtcNow)
                 {
-                    var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
+                    var remainingTime = (lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) - DateTime.UtcNow).Minutes;
                     return new ActionResponse
                     {
                         StatusCode = 400,
@@ -122,7 +122,12 @@ namespace VinhUni_Educator_API.Services
                     var course = await _context.Courses.FirstOrDefaultAsync(o => o.CourseId == item.idKhoaHoc);
                     var major = await _context.Majors.FirstOrDefaultAsync(o => o.MajorId == item.idNganh);
                     var program = await _context.TrainingPrograms.FirstOrDefaultAsync(o => o.ProgramId == item.id);
-                    if (program is null && major != null && course != null)
+                    if (major is null || course is null)
+                    {
+                        countFailed++;
+                        continue;
+                    }
+                    if (program is null)
                     {
                         program = new TrainingProgram
                         {
@@ -141,8 +146,18 @@ namespace VinhUni_Educator_API.Services
                         await _context.TrainingPrograms.AddAsync(program);
                         countNewProgram++;
                     }
-                    if (major is null || course is null)
-                        countFailed++;
+                    else
+                    {
+                        program.ProgramCode = item.code;
+                        program.ProgramName = item.ten;
+                        program.MajorId = major.Id;
+                        program.CourseId = course.Id;
+                        program.CreditHours = item.soTinChi;
+                        program.StartYear = item.namBatDau;
+                        program.TrainingYears = item.soNamDaoTao;
+                        program.MaxTrainingYears = item.soNamDaoTaoToiDa;
+                        _context.TrainingPrograms.Update(program);
+                    }
                 }
                 await _context.SaveChangesAsync();
                 await _context.Database.CommitTransactionAsync();
@@ -344,6 +359,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.Id == programId);
+                var existsProgramCode = await _context.TrainingPrograms.AnyAsync(p => p.ProgramCode == model.ProgramCode && p.Id != programId);
                 if (program is null || program.IsDeleted)
                 {
                     return new ActionResponse
@@ -351,6 +367,15 @@ namespace VinhUni_Educator_API.Services
                         StatusCode = 404,
                         IsSuccess = false,
                         Message = "Không tìm thấy chương trình đào tạo hoặc chương trình đã bị xóa"
+                    };
+                }
+                if (existsProgramCode)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Mã chương trình đào tạo đã tồn tại"
                     };
                 }
                 var major = await _context.Majors.FirstOrDefaultAsync(m => m.Id == model.MajorId);

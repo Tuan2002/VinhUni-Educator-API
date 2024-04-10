@@ -49,9 +49,9 @@ namespace VinhUni_Educator_API.Services
             {
                 //Check if the last sync action is within 30 minutes
                 var lastSync = await _context.SyncActions.OrderByDescending(s => s.SyncAt).FirstOrDefaultAsync(s => s.ActionName == SyncActionList.SyncClass);
-                if (lastSync != null && lastSync.SyncAt.AddMinutes(30) > DateTime.UtcNow)
+                if (lastSync != null && lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) > DateTime.UtcNow)
                 {
-                    var remainingTime = (lastSync.SyncAt.AddMinutes(30) - DateTime.UtcNow).Minutes;
+                    var remainingTime = (lastSync.SyncAt.AddMinutes(SyncActionList.SYNC_TIME_OUT) - DateTime.UtcNow).Minutes;
                     return new ActionResponse
                     {
                         StatusCode = 400,
@@ -117,7 +117,12 @@ namespace VinhUni_Educator_API.Services
                     var course = await _context.Courses.FirstOrDefaultAsync(c => c.CourseCode == item.idKhoaHoc);
                     var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.ProgramCode == item.idNganh);
                     var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(cls => cls.ClassId == item.id);
-                    if (primaryClass is null && program != null && course != null)
+                    if (program is null || course is null)
+                    {
+                        countFailed++;
+                        continue;
+                    }
+                    if (primaryClass is null)
                     {
                         primaryClass = new PrimaryClass
                         {
@@ -129,12 +134,17 @@ namespace VinhUni_Educator_API.Services
                             CreatedById = userId,
                             CreatedAt = DateTime.UtcNow,
                         };
-
                         await _context.PrimaryClasses.AddAsync(primaryClass);
                         countNewClass++;
                     }
-                    if (program is null || course is null)
-                        countFailed++;
+                    else
+                    {
+                        primaryClass.ClassCode = item.code;
+                        primaryClass.ClassName = item.ten;
+                        primaryClass.ProgramId = program.Id;
+                        primaryClass.CourseId = course.Id;
+                        _context.PrimaryClasses.Update(primaryClass);
+                    }
                 }
                 await _context.SaveChangesAsync();
                 await _context.Database.CommitTransactionAsync();
@@ -336,6 +346,7 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(cls => cls.Id == classId && cls.IsDeleted == false);
+                var existsClassCode = await _context.PrimaryClasses.AnyAsync(cls => cls.ClassCode == model.ClassCode && cls.Id != classId);
                 if (primaryClass is null)
                 {
                     return new ActionResponse
@@ -343,6 +354,15 @@ namespace VinhUni_Educator_API.Services
                         StatusCode = 404,
                         IsSuccess = false,
                         Message = "Không tìm thấy lớp hành chính hoặc lớp hành chính đã bị xóa"
+                    };
+                }
+                if (existsClassCode)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 400,
+                        IsSuccess = false,
+                        Message = "Mã lớp hành chính đã tồn tại"
                     };
                 }
                 primaryClass.ClassCode = model.ClassCode ?? primaryClass.ClassCode;
