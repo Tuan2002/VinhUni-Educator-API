@@ -153,7 +153,7 @@ namespace VinhUni_Educator_API.Services
                                 StudentCode = studentData.code,
                                 FirstName = studentData.ho,
                                 LastName = studentData.ten,
-                                Gender = studentData.gioiTinh,
+                                Gender = ConvertGender.ConvertToInt(studentData.gioiTinh),
                                 Dob = DateOnly.FromDateTime(studentData.ngaySinh),
                                 UserId = user.Id,
                                 ClassId = primaryClass.Id,
@@ -161,21 +161,16 @@ namespace VinhUni_Educator_API.Services
                                 CourseId = course.Id,
                                 CreatedAt = DateTime.UtcNow,
                                 IsSynced = true,
-                                CreatedById = user.Id
+                                CreatedById = user.Id,
+                                SmartId = userSync.id
                             };
                             await _context.Students.AddAsync(student);
                         }
                         else
                         {
-                            student.FirstName = studentData.ho;
-                            student.LastName = studentData.ten;
-                            student.Gender = studentData.gioiTinh;
-                            student.Dob = DateOnly.FromDateTime(studentData.ngaySinh);
                             student.UserId = user.Id;
-                            student.ClassId = primaryClass.Id;
-                            student.ProgramId = program.Id;
-                            student.CourseId = course.Id;
                             student.IsSynced = true;
+                            student.SmartId = userSync.id;
                             _context.Students.Update(student);
                         }
                         break;
@@ -219,20 +214,22 @@ namespace VinhUni_Educator_API.Services
                                 OrganizationId = organization?.Id,
                                 CreatedAt = DateTime.UtcNow,
                                 IsSynced = true,
-                                CreatedById = user.Id
+                                CreatedById = user.Id,
+                                SmartId = userSync.id
                             };
                             await _context.Teachers.AddAsync(teacher);
                         }
                         else
                         {
-                            teacher.FirstName = teacherData.hS_Ho;
-                            teacher.LastName = teacherData.hS_Ten;
-                            teacher.Gender = teacherData.hS_GioiTinh;
-                            teacher.Email = teacherData.hS_Email ?? user.Email;
-                            teacher.Dob = DateOnly.FromDateTime(teacherData.ngaySinh);
-                            teacher.UserId = user.Id;
+                            // teacher.FirstName = teacherData.hS_Ho;
+                            // teacher.LastName = teacherData.hS_Ten;
+                            // teacher.Gender = teacherData.hS_GioiTinh;
+                            // teacher.Email = teacherData.hS_Email ?? user.Email;
+                            // teacher.Dob = DateOnly.FromDateTime(teacherData.ngaySinh);
                             teacher.OrganizationId = organization?.Id;
+                            teacher.UserId = user.Id;
                             teacher.IsSynced = true;
+                            teacher.SmartId = userSync.id;
                             _context.Teachers.Update(teacher);
                         }
                         break;
@@ -330,6 +327,7 @@ namespace VinhUni_Educator_API.Services
             {
                 var query = _userManager.Users.AsQueryable();
                 query = query.Where(u => u.IsDeleted == false || u.IsDeleted == null);
+                query = query.OrderByDescending(u => u.CreatedAt);
                 var pageIndex = PageIndex ?? DEFAULT_PAGE_INDEX;
                 var pageSize = limit ?? DEFAULT_PAGE_SIZE;
                 // Get users with pagination
