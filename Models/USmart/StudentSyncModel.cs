@@ -12,5 +12,6 @@ namespace VinhUni_Educator_API.Entities
         public string code { get; set; } = null!;
         public string idKhoaHoc { get; set; } = null!;
         public string idNganh { get; set; } = null!;
+        public string userId { get; set; } = null!;
     }
 }

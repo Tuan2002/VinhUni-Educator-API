@@ -11,10 +11,10 @@ namespace VinhUni_Educator_API.Entities
         public string StudentCode { get; set; } = null!;
         public string FirstName { get; set; } = null!;
         public string LastName { get; set; } = null!;
-        public string? Gender { get; set; }
+        public int? Gender { get; set; }
         public DateOnly? Dob { get; set; }
         [ForeignKey("User")]
-        public string? UserId { get; set; } = null!;
+        public string? UserId { get; set; }
         public virtual ApplicationUser? User { get; set; } = null!;
         [ForeignKey("PrimaryClass")]
         public int? ClassId { get; set; }
@@ -28,6 +28,7 @@ namespace VinhUni_Educator_API.Entities
         [ForeignKey("CreatedBy")]
         public string? CreatedById { get; set; } = null!;
         public virtual ApplicationUser? CreatedBy { get; set; } = null!;
+        public int? SmartId { get; set; }
         public DateTime? CreatedAt { get; set; }
         public bool IsSynced { get; set; } = false;
         public bool IsDeleted { get; set; } = false;

@@ -23,6 +23,7 @@ namespace VinhUni_Educator_API.Entities
         [ForeignKey("CreatedBy")]
         public string? CreatedById { get; set; } = null!;
         public virtual ApplicationUser? CreatedBy { get; set; } = null!;
+        public int? SmartId { get; set; }
         public DateTime? CreatedAt { get; set; }
         public bool IsSynced { get; set; } = false;
         public bool IsDeleted { get; set; } = false;

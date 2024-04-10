@@ -165,6 +165,7 @@ namespace VinhUni_Educator_API.Services
             {
                 var query = _context.Majors.AsQueryable();
                 query = query.Where(m => m.IsDeleted == false);
+                query = query.OrderByDescending(m => m.CreatedAt);
                 var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 var currentLimit = limit ?? DEFAULT_PAGE_SIZE;
                 var majorList = await PageList<Major, MajorViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);

@@ -185,6 +185,7 @@ namespace VinhUni_Educator_API.Services
                 int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
                 var query = _context.TrainingPrograms.AsQueryable();
                 query = query.Where(p => p.IsDeleted == false);
+                query.OrderByDescending(p => p.CreatedAt);
                 var programList = await PageList<TrainingProgram, ProgramViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
                 return new ActionResponse
                 {

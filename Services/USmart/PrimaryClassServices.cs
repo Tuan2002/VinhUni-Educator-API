@@ -177,6 +177,7 @@ namespace VinhUni_Educator_API.Services
                 var currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 var query = _context.PrimaryClasses.AsQueryable();
                 query = query.Where(cls => cls.IsDeleted == false);
+                query = query.OrderByDescending(cls => cls.CreatedAt);
                 var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
                 return new ActionResponse
                 {
@@ -385,6 +386,7 @@ namespace VinhUni_Educator_API.Services
                 }
                 var query = _context.PrimaryClasses.AsQueryable();
                 query = query.Where(cls => cls.ProgramId == programId && cls.IsDeleted == false);
+                query = query.OrderByDescending(cls => cls.CreatedAt);
                 var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
                 return new ActionResponse
                 {
@@ -423,6 +425,7 @@ namespace VinhUni_Educator_API.Services
                 }
                 var query = _context.PrimaryClasses.AsQueryable();
                 query = query.Where(cls => cls.CourseId == courseId && cls.IsDeleted == false);
+                query = query.OrderByDescending(cls => cls.CreatedAt);
                 var classList = await PageList<PrimaryClass, ClassViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
                 return new ActionResponse
                 {
