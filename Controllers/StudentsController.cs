@@ -47,11 +47,75 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
+        [Route("get-student-by-id/{studentId}")]
+        [SwaggerOperation(Summary = "Lấy thông tin sinh viên theo ID", Description = "Lấy thông tin sinh viên theo ID")]
+        public async Task<IActionResult> GetStudentById(int studentId)
+        {
+            var response = await _studentServices.GetStudentByIdAsync(studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("get-student-by-code/{studentCode}")]
+        [SwaggerOperation(Summary = "Lấy thông tin sinh viên theo mã sinh viên", Description = "Lấy thông tin sinh viên theo mã sinh viên")]
+        public async Task<IActionResult> GetStudentByCode(string studentCode)
+        {
+            var response = await _studentServices.GetStudentByCodeAsync(studentCode);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
         [Route("get-students-by-class/{classId}")]
         [SwaggerOperation(Summary = "Lấy danh sách sinh viên theo lớp hành chính", Description = "Lấy danh sách sinh viên theo lớp hành chính")]
         public async Task<IActionResult> GetStudentsByClass(int classId)
         {
-            var response = await _studentServices.GetStudentByClassAsync(classId);
+            var response = await _studentServices.GetStudentsByClassAsync(classId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("update-student/{studentId}")]
+        [SwaggerOperation(Summary = "Cập nhật thông tin sinh viên", Description = "Cập nhật thông tin sinh viên")]
+        public async Task<IActionResult> UpdateStudent(int studentId, [FromBody] UpdateStudentModel model)
+        {
+            var response = await _studentServices.UpdateStudentAsync(studentId, model);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpDelete]
+        [Route("delete-student/{studentId}")]
+        [SwaggerOperation(Summary = "Xóa sinh viên", Description = "Xóa sinh viên")]
+        public async Task<IActionResult> DeleteStudent(int studentId)
+        {
+            var response = await _studentServices.DeleteStudentAsync(studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("restore-student/{studentId}")]
+        [SwaggerOperation(Summary = "Khôi phục sinh viên", Description = "Khôi phục sinh viên")]
+        public async Task<IActionResult> RestoreStudent(int studentId)
+        {
+            var response = await _studentServices.RestoreStudentAsync(studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("link-account/{studentId}")]
+        [SwaggerOperation(Summary = "Liên kết tài khoản sinh viên", Description = "Liên kết tài khoản người dùng với sinh viên")]
+        public async Task<IActionResult> LinkAccount(int studentId, [FromQuery] string userId)
+        {
+            var response = await _studentServices.LinkUserAccountAsync(studentId, userId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("unlink-account/{studentId}")]
+        [SwaggerOperation(Summary = "Hủy liên kết tài khoản sinh viên", Description = "Hủy liên kết tài khoản người dùng với sinh viên")]
+        public async Task<IActionResult> UnlinkAccount(int studentId)
+        {
+            var response = await _studentServices.UnlinkUserAccountAsync(studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("search")]
+        [SwaggerOperation(Summary = "Tìm kiếm sinh viên", Description = "Tìm kiếm sinh viên theo từ khóa")]
+        public async Task<IActionResult> SearchStudent([FromQuery] string? searchKey, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
+        {
+            var response = await _studentServices.SearchStudentAsync(searchKey, limit);
             return StatusCode(response.StatusCode, response);
         }
     }

@@ -466,7 +466,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> SearchPrimaryClassesAsync(string keyword, int? limit)
+        public async Task<ActionResponse> SearchPrimaryClassesAsync(string? keyword, int? limit)
         {
             try
             {
@@ -479,11 +479,12 @@ namespace VinhUni_Educator_API.Services
                 query = query.OrderByDescending(cls => cls.CreatedAt);
                 var response = await query.Take(currentLimit).ToListAsync();
                 var classList = _mapper.Map<List<ClassViewModel>>(response);
+                int totalClassFound = classList.Count;
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Message = "Tìm kiếm lớp hành chính thành công",
+                    Message = $"Tìm thấy {totalClassFound} lớp hành chính",
                     Data = classList
                 };
             }

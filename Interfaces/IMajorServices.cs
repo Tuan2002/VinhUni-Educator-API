@@ -12,6 +12,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> DeleteMajorAsync(int majorId);
         Task<ActionResponse> UpdateMajorAsync(int majorId, UpdateMajorModel model);
         Task<ActionResponse> RestoreMajorAsync(int majorId);
-        Task<ActionResponse> SearchMajorsAsync(string keyword, int? limit);
+        Task<ActionResponse> SearchMajorsAsync(string? keyword, int? limit);
     }
 }
