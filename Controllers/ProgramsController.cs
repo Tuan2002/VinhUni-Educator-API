@@ -102,7 +102,7 @@ namespace VinhUni_Educator_API.Controllers
         [SwaggerResponse(200, "Danh sách chương trình đào tạo được tìm thấy", typeof(ActionResponse), Description = "Danh sách chương trình đào tạo được tìm thấy trong hệ thống", ContentTypes = ["application/json"])]
         [SwaggerResponse(404, "Không tìm thấy chương trình đào tạo", typeof(ActionResponse), Description = "Không tìm thấy chương trình đào tạo trong hệ thống", ContentTypes = ["application/json"])]
         [SwaggerResponse(500, "Lỗi máy chủ", typeof(ActionResponse), Description = "Lỗi  xảy ở máy chủ", ContentTypes = ["application/json"])]
-        public async Task<IActionResult> SearchProgramsAsync([FromQuery] string keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
+        public async Task<IActionResult> SearchProgramsAsync([FromQuery] string? keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
         {
             var response = await _programServices.SearchProgramsAsync(keyword, limit);
             return StatusCode(response.StatusCode, response);

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using VinhUni_Educator_API.Context;
@@ -20,10 +21,11 @@ namespace VinhUni_Educator_API.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
         private readonly IMapper _mapper;
+        private readonly UserManager<ApplicationUser> _userManager;
         public const int DEFAULT_PAGE_SIZE = 10;
         public const int DEFAULT_PAGE_INDEX = 1;
         public const int DEFAULT_SEARCH_RESULT = 10;
-        public StudentServices(ApplicationDBContext context, IConfiguration config, ILogger<CourseServices> logger, IHttpContextAccessor httpContextAccessor, IJwtServices jwtServices, IMapper mapper)
+        public StudentServices(ApplicationDBContext context, IConfiguration config, ILogger<CourseServices> logger, IHttpContextAccessor httpContextAccessor, IJwtServices jwtServices, IMapper mapper, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _config = config;
@@ -31,6 +33,7 @@ namespace VinhUni_Educator_API.Services
             _httpContextAccessor = httpContextAccessor;
             _jwtServices = jwtServices;
             _mapper = mapper;
+            _userManager = userManager;
         }
         public async Task<ActionResponse> GetStudentsAsync(int? pageIndex, int? limit)
         {
@@ -58,6 +61,35 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = 500,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi lấy danh sách sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> GetDeletedStudentsAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                var pageSize = limit ?? DEFAULT_PAGE_SIZE;
+                var pageNumber = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var query = _context.Students.AsQueryable();
+                query = query.Where(x => x.IsDeleted == true);
+                query = query.OrderByDescending(x => x.CreatedAt);
+                var studentList = await PageList<Student, StudentViewModel>.CreateWithMapperAsync(query, pageNumber, pageSize, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách sinh viên đã xoá thành công",
+                    Data = studentList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting deleted students: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách sinh viên đã xoá, vui lòng thử lại sau",
                 };
             }
         }
@@ -260,7 +292,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetStudentByClassAsync(int classId)
+        public async Task<ActionResponse> GetStudentsByClassAsync(int classId)
         {
             try
             {
@@ -297,6 +329,394 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = 500,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi lấy danh sách sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentByCodeAsync(string studentCode)
+        {
+            try
+            {
+                var rawStudent = await _context.Students.FirstOrDefaultAsync(x => x.StudentCode == studentCode && x.IsDeleted == false);
+                if (rawStudent == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                var student = _mapper.Map<StudentViewModel>(rawStudent);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin sinh viên thành công",
+                    Data = student
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting student: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentByIdAsync(int studentId)
+        {
+            try
+            {
+                var rawStudent = await _context.Students.FirstOrDefaultAsync(x => x.Id == studentId && x.IsDeleted == false);
+                if (rawStudent == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                var student = _mapper.Map<StudentViewModel>(rawStudent);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin sinh viên thành công",
+                    Data = student
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while getting student: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> UpdateStudentAsync(int studentId, UpdateStudentModel model)
+        {
+            try
+            {
+                var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == studentId && x.IsDeleted == false);
+                if (student == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                var primaryClass = _context.PrimaryClasses.FirstOrDefault(x => x.Id == model.ClassId);
+                var course = _context.Courses.FirstOrDefault(x => x.Id == model.CourseId);
+                var program = _context.TrainingPrograms.FirstOrDefault(x => x.Id == model.ProgramId);
+                if (course == null || program == null || primaryClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khoá học hoặc ngành học"
+                    };
+                }
+                if (program.CourseId != course.Id)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = $"Chương trình đào tạo '{program.ProgramName}' không thuộc khoá học '{course.CourseName}'"
+                    };
+                }
+                if (primaryClass.CourseId != course.Id)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = $"Lớp '{primaryClass.ClassName}' không thuộc khoá học '{course.CourseName}'"
+                    };
+                }
+                if (primaryClass.ProgramId != program.Id)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = $"Lớp '{primaryClass.ClassName}' không thuộc chương trình đào tạo '{program.ProgramName}'"
+                    };
+                }
+                student.FirstName = model.FirstName ?? student.FirstName;
+                student.LastName = model.LastName ?? student.LastName;
+                student.Dob = model.Dob ?? student.Dob;
+                student.Gender = model.Gender ?? student.Gender;
+                student.ClassId = model.ClassId ?? student.ClassId;
+                student.CourseId = model.CourseId ?? student.CourseId;
+                student.ProgramId = model.ProgramId ?? student.ProgramId;
+                _context.Students.Update(student);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Cập nhật thông tin sinh viên thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while updating student: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi cập nhật thông tin sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> DeleteStudentAsync(int studentId)
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == studentId && x.IsDeleted == false);
+                if (student == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                student.IsDeleted = true;
+                student.DeletedAt = DateTime.UtcNow;
+                student.DeletedBy = userId;
+                _context.Students.Update(student);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Xóa sinh viên thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while deleting student: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi xóa sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> RestoreStudentAsync(int studentId)
+        {
+            try
+            {
+                var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == studentId && x.IsDeleted == true);
+                if (student == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                student.IsDeleted = false;
+                _context.Students.Update(student);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Khôi phục sinh viên thành công"
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while restoring student: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi khôi phục sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> LinkUserAccountAsync(int studentId, string userId)
+        {
+            try
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == userId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = $"Không tìm thấy người dùng"
+                    };
+                }
+                var userRoles = await _userManager.GetRolesAsync(user);
+                if (!userRoles.Contains(AppRoles.Student))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Không thể liên kết tài khoản người dùng không phải là sinh viên"
+                    };
+                }
+                var linkedStudent = await _context.Students.FirstOrDefaultAsync(x => x.Id != studentId && x.UserId == userId);
+                if (linkedStudent != null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = $"Tài khoản người dùng đã được liên kết với sinh viên: {linkedStudent.StudentCode}"
+                    };
+                }
+                var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == studentId && x.IsDeleted == false);
+                if (student == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                if (student.UserId != null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Sinh viên này đã liên kết với tài khoản người dùng"
+                    };
+                }
+                if (student.SmartId == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Sinh viên chưa được đồng bộ thông tin từ hệ thống USmart"
+                    };
+                }
+                student.UserId = userId;
+                user.USmartId = student.SmartId;
+                _context.Students.Update(student);
+                await _userManager.UpdateAsync(user);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Liên kết tài khoản sinh viên thành công",
+                    Data = _mapper.Map<StudentViewModel>(student)
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while linking user account: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi liên kết tài khoản, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> UnlinkUserAccountAsync(int studentId)
+        {
+            try
+            {
+                var student = await _context.Students.FirstOrDefaultAsync(x => x.Id == studentId);
+                if (student == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == student.UserId);
+                if (user == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Sinh viên không liên kết với tài khoản người dùng nào"
+                    };
+                }
+                student.UserId = null;
+                user.USmartId = null;
+                _context.Students.Update(student);
+                await _userManager.UpdateAsync(user);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Hủy liên kết tài khoản sinh viên thành công",
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while unlinking user account: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi hủy liên kết tài khoản, vui lòng thử lại sau",
+                };
+            }
+        }
+        public async Task<ActionResponse> SearchStudentAsync(string? searchKey, int? limit)
+        {
+            try
+            {
+                var pageSize = limit ?? DEFAULT_SEARCH_RESULT;
+                var query = _context.Students.AsQueryable();
+                if (!string.IsNullOrEmpty(searchKey))
+                {
+                    query = query.Where(x => x.StudentCode.Contains(searchKey) || x.FirstName.Contains(searchKey) || x.LastName.Contains(searchKey));
+                }
+                query = query.Where(x => x.IsDeleted == false);
+                query = query.OrderByDescending(x => x.CreatedAt);
+                var rawStudent = await query.ToListAsync();
+                var studentList = _mapper.Map<List<StudentViewModel>>(rawStudent);
+                int totalCount = studentList.Count;
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = $"Tìm thấy {totalCount} sinh viên",
+                    Data = studentList
+                };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while searching students: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi tìm kiếm sinh viên, vui lòng thử lại sau",
                 };
             }
         }

@@ -12,6 +12,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> DeleteCourseAsync(int courseId);
         Task<ActionResponse> RestoreCourseAsync(int courseId);
         Task<ActionResponse> UpdateCourseAsync(int courseId, UpdateCourseModel model);
-        Task<ActionResponse> SearchCourseAsync(string keyword, int? limit);
+        Task<ActionResponse> SearchCourseAsync(string? keyword, int? limit);
     }
 }

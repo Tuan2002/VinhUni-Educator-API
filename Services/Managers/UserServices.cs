@@ -641,13 +641,13 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> SearchUsersAsync(string searchKey, int? limit)
+        public async Task<ActionResponse> SearchUsersAsync(string? searchKey, int? limit)
         {
             try
             {
                 var searchResultCount = limit ?? DEFAULT_SEARCH_RESULT;
                 var query = _userManager.Users.AsQueryable();
-                if (searchKey != null)
+                if (!string.IsNullOrEmpty(searchKey))
                 {
                     query = query.Where(u => u.FirstName != null && u.FirstName.Contains(searchKey) || u.LastName != null && u.LastName.Contains(searchKey) || u.UserName != null && u.UserName.Contains(searchKey));
                 }
@@ -659,7 +659,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Message = $"Tìm thấy {totalCount} kết quả",
+                    Message = $"Tìm thấy {totalCount} người dùng",
                     Data = new
                     {
                         TotalCount = totalCount,

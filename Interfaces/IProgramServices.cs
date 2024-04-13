@@ -14,6 +14,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> UpdateProgramAsync(int programId, UpdateProgramModel model);
         Task<ActionResponse> GetProgramsByMajorAsync(int majorId, int? pageIndex, int? limit);
         Task<ActionResponse> GetProgramsByCourseAsync(int courseId, int? pageIndex, int? limit);
-        Task<ActionResponse> SearchProgramsAsync(string keyword, int? limit);
+        Task<ActionResponse> SearchProgramsAsync(string? keyword, int? limit);
     }
 }

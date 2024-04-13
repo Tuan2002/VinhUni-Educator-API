@@ -493,7 +493,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> SearchProgramsAsync(string searchKey, int? limit)
+        public async Task<ActionResponse> SearchProgramsAsync(string? searchKey, int? limit)
         {
             try
             {
@@ -506,12 +506,13 @@ namespace VinhUni_Educator_API.Services
                 query = query.Where(p => p.IsDeleted == false);
                 var response = await query.Take(currentLimit).ToListAsync();
                 var programList = _mapper.Map<List<ProgramViewModel>>(response);
+                int totalProgramFound = programList.Count;
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
                     Data = programList,
-                    Message = "Tìm kiếm chương trình đào tạo thành công"
+                    Message = $"Tìm thấy {totalProgramFound} chương trình đào tạo"
                 };
             }
             catch (Exception e)

@@ -9,6 +9,7 @@ namespace VinhUni_Educator_API.Models
         public int? Gender { get; set; }
         public DateOnly? Dob { get; set; }
         public string? UserId { get; set; }
+        public string? UserName { get; set; }
         public int? ClassId { get; set; }
         public string? ClassName { get; set; }
         public int? ProgramId { get; set; }

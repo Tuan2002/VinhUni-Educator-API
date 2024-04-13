@@ -14,7 +14,7 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> UpdatePrimaryClassAsync(int classId, UpdateClassModel model);
         Task<ActionResponse> GetPrimaryClassesByCourseAsync(int courseId, int? pageIndex, int? limit);
         Task<ActionResponse> GetPrimaryClassesByProgramAsync(int programId, int? pageIndex, int? limit);
-        Task<ActionResponse> SearchPrimaryClassesAsync(string keyword, int? limit);
+        Task<ActionResponse> SearchPrimaryClassesAsync(string? keyword, int? limit);
 
     }
 }

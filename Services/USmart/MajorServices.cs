@@ -379,7 +379,7 @@ namespace VinhUni_Educator_API.Services
             }
 
         }
-        public async Task<ActionResponse> SearchMajorsAsync(string keyword, int? limit)
+        public async Task<ActionResponse> SearchMajorsAsync(string? keyword, int? limit)
         {
             try
             {
@@ -392,11 +392,13 @@ namespace VinhUni_Educator_API.Services
                 query = query.Where(m => m.IsDeleted == false);
                 var response = await query.Take(searchLimit).ToListAsync();
                 var majorList = _mapper.Map<List<MajorViewModel>>(response);
+                int totalMajorFound = majorList.Count;
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
-                    Data = majorList
+                    Data = majorList,
+                    Message = $"Tìm thấy {totalMajorFound} ngành học"
                 };
             }
             catch (Exception e)
