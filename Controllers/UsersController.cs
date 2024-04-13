@@ -102,7 +102,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpGet]
         [Route("search")]
         [SwaggerOperation(Summary = "Tìm kiếm người dùng", Description = "Tìm kiếm người dùng")]
-        public async Task<IActionResult> SearchUsersAsync([FromQuery] string keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
+        public async Task<IActionResult> SearchUsersAsync([FromQuery] string? keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
         {
             var response = await _userServices.SearchUsersAsync(keyword, limit);
             return StatusCode(response.StatusCode, response);

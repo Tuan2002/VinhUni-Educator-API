@@ -382,7 +382,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> SearchCourseAsync(string keyword, int? limit)
+        public async Task<ActionResponse> SearchCourseAsync(string? keyword, int? limit)
         {
             try
             {

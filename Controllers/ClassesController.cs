@@ -88,7 +88,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpGet]
         [Route("search")]
         [SwaggerOperation(Summary = "Tìm kiếm lớp hành chính", Description = "Tìm kiếm lớp hành chính theo từ khóa")]
-        public async Task<IActionResult> SearchPrimaryClasses([FromQuery] string keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
+        public async Task<IActionResult> SearchPrimaryClasses([FromQuery] string? keyword, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
         {
             var response = await _primaryClassServices.SearchPrimaryClassesAsync(keyword, limit);
             return StatusCode(response.StatusCode, response);

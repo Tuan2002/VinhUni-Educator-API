@@ -373,12 +373,13 @@ namespace VinhUni_Educator_API.Services
                 query = query.OrderBy(o => o.CreatedAt);
                 var response = await query.Take(searchLimit).ToListAsync();
                 var organizationList = _mapper.Map<List<OrganizationViewModel>>(response);
+                int totalOrganizationFound = organizationList.Count;
                 return new ActionResponse
                 {
                     StatusCode = 200,
                     IsSuccess = true,
                     Data = organizationList,
-                    Message = "Tìm kiếm đơn vị thành công"
+                    Message = $"Tìm thấy {totalOrganizationFound} đơn vị"
                 };
             }
             catch (Exception e)
