@@ -7,7 +7,7 @@ namespace VinhUni_Educator_API.Interfaces
     {
         Task<ActionResponse> GetStudentsAsync(int? pageIndex, int? limit);
         Task<ActionResponse> GetDeletedStudentsAsync(int? pageIndex, int? limit);
-        Task<ActionResponse> GetAImportableStudentsByClassAsync(int classId);
+        Task<ActionResponse> GetImportableStudentsByClassAsync(int classId);
         Task<ActionResponse> ImportStudentByClass(int classId, List<ImportStudentModel> students);
         Task<ActionResponse> GetStudentsByClassAsync(int classId);
         Task<ActionResponse> GetStudentByIdAsync(int studentId);

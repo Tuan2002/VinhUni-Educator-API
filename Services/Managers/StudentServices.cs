@@ -93,7 +93,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetAImportableStudentsByClassAsync(int classId)
+        public async Task<ActionResponse> GetImportableStudentsByClassAsync(int classId)
         {
             try
             {
@@ -129,13 +129,13 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var primaryClass = _context.PrimaryClasses.FirstOrDefault(x => x.Id == classId);
-                if (primaryClass == null)
+                if (primaryClass == null || primaryClass.IsDeleted == true)
                 {
                     return new ActionResponse
                     {
                         StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
-                        Message = "Không tìm thấy lớp học này trong hệ thống"
+                        Message = "Không tìm thấy lớp học hoặc lớp học đã bị xóa"
                     };
                 }
                 var fetch = new FetchData(APIBaseURL, smartToken.Token);
@@ -218,14 +218,13 @@ namespace VinhUni_Educator_API.Services
                 foreach (var student in students)
                 {
                     var resultItem = _mapper.Map<ImportStudentViewModel>(student);
-                    var studentExist = _context.Students.Any(s => s.StudentCode == student.StudentCode);
-                    var course = _context.Courses.FirstOrDefault(c => c.CourseCode == student.CourseCode);
-                    var program = _context.TrainingPrograms.FirstOrDefault(p => p.ProgramCode == student.ProgramCode);
+                    var studentExist = await _context.Students.AnyAsync(s => s.StudentCode == student.StudentCode);
+                    var course = await _context.Courses.FirstOrDefaultAsync(c => c.CourseCode == student.CourseCode);
+                    var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.ProgramCode == student.ProgramCode);
                     if (studentExist || student.ClassId != primaryClass?.ClassId)
                     {
                         resultItem = _mapper.Map<ImportStudentViewModel>(student);
                         resultItem.IsImported = false;
-                        resultItem.ClassName = primaryClass?.ClassName;
                         resultItem.CourseName = course?.CourseName;
                         resultItem.ProgramName = program?.ProgramName;
                         resultItem.ErrorMessage = "Sinh viên đã tồn tại hoặc không thuộc lớp học này";
@@ -236,7 +235,7 @@ namespace VinhUni_Educator_API.Services
                     if (course == null || program == null || primaryClass == null)
                     {
                         resultItem.IsImported = false;
-                        resultItem.ErrorMessage = "Không tìm thấy khoa học hoặc ngành học";
+                        resultItem.ErrorMessage = "Không tìm thấy khoá học hoặc ngành học";
                         importResult.Add(resultItem);
                         failCount++;
                         continue;
@@ -466,7 +465,8 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
-                    Message = "Cập nhật thông tin sinh viên thành công"
+                    Message = "Cập nhật thông tin sinh viên thành công",
+                    Data = _mapper.Map<StudentViewModel>(student)
                 };
             }
             catch (Exception e)

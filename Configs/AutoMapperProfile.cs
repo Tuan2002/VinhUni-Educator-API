@@ -26,6 +26,8 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
             CreateMap<Organization, OrganizationViewModel>()
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
+
+            // Mapper for Student
             CreateMap<Student, StudentViewModel>()
             .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy != null ? src.CreatedBy.FirstName + " " + src.CreatedBy.LastName : null))
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User != null ? src.User.UserName : null))
@@ -44,6 +46,21 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.ProgramCode, opt => opt.MapFrom(src => src.idNganh))
             .ForMember(dest => dest.SSOId, opt => opt.MapFrom(src => int.Parse(src.userId)));
             CreateMap<ImportStudentModel, ImportStudentViewModel>();
+
+            // Mapper for Teacher
+            CreateMap<Teacher, TeacherViewModel>()
+            .ForMember(dest => dest.OrganizationName, opt => opt.MapFrom(src => src.Organization != null ? src.Organization.OrganizationName : null));
+            CreateMap<TeacherSyncModel, ImportTeacherModel>()
+            .ForMember(dest => dest.TeacherId, opt => opt.MapFrom(src => src.id))
+            .ForMember(dest => dest.TeacherCode, opt => opt.MapFrom(src => src.hS_ID))
+            .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.hS_Ho))
+            .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.hS_Ten))
+            .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.hS_GioiTinh))
+            .ForMember(dest => dest.Dob, opt => opt.MapFrom(src => DateOnly.FromDateTime(src.ngaySinh)))
+            .ForMember(dest => dest.OrganizationCode, opt => opt.MapFrom(src => src.dV_ID_GiangDay))
+            .ForMember(dest => dest.SSOId, opt => opt.MapFrom(src => int.Parse(src.userId)))
+            .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.hS_Email));
+            CreateMap<ImportTeacherModel, ImportTeacherViewModel>();
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -86,7 +87,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("update-user/{userId}")]
         [SwaggerOperation(Summary = "Cập nhật thông tin người dùng", Description = "Cập nhật thông tin người dùng")]
-        public async Task<IActionResult> UpdateUserAsync(string userId, [FromBody] UpdateProfileModel model)
+        public async Task<IActionResult> UpdateUserAsync(string userId, [FromBody][Required] UpdateProfileModel model)
         {
             var response = await _userServices.UpdateUserAsync(userId, model);
             return StatusCode(response.StatusCode, response);
@@ -94,7 +95,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("reset-password/{userId}")]
         [SwaggerOperation(Summary = "Đặt lại mật khẩu người dùng", Description = "Đặt lại mật khẩu người dùng")]
-        public async Task<IActionResult> ResetPasswordAsync(string userId, [FromBody] ResetPasswordModel model)
+        public async Task<IActionResult> ResetPasswordAsync(string userId, [FromBody][Required] ResetPasswordModel model)
         {
             var response = await _userServices.ResetUserPasswordAsync(userId, model);
             return StatusCode(response.StatusCode, response);

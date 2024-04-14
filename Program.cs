@@ -14,6 +14,7 @@ using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Middlewares;
 using VinhUni_Educator_API.Services;
+using VinhUni_Educator_API.Services.Managers;
 using VinhUni_Educator_API.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -124,6 +125,7 @@ builder.Services.AddScoped<IPrimaryClassServices, PrimaryClassServices>();
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<IAccountServices, AccountServices>();
 builder.Services.AddScoped<IStudentServices, StudentServices>();
+builder.Services.AddScoped<ITeacherServices, TeacherServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {

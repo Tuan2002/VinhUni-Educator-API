@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -29,7 +30,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("set-password")]
         [SwaggerOperation(Summary = "Thay đổi mật khẩu lần đầu", Description = "Thay đổi mật khẩu lần đầu sau khi đăng nhập tài khoản")]
-        public async Task<IActionResult> FirstChangePassword([FromBody] ResetPasswordModel model)
+        public async Task<IActionResult> FirstChangePassword([FromBody][Required] ResetPasswordModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -48,7 +49,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("change-password")]
         [SwaggerOperation(Summary = "Thay đổi mật khẩu", Description = "Thay đổi mật khẩu người dùng")]
-        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordModel model)
+        public async Task<IActionResult> ChangePassword([FromBody][Required] ChangePasswordModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -102,7 +103,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("update-profile")]
         [SwaggerOperation(Summary = "Cập nhật thông tin cá nhân", Description = "Cập nhật thông tin cá nhân người dùng")]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileModel model)
+        public async Task<IActionResult> UpdateProfile([FromBody][Required] UpdateProfileModel model)
         {
             if (!ModelState.IsValid)
             {
@@ -121,7 +122,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("change-avatar")]
         [SwaggerOperation(Summary = "Thay đổi ảnh đại diện", Description = "Thay đổi ảnh đại diện người dùng")]
-        public async Task<IActionResult> UploadProfileImage([FromBody] UploadProfileImage model)
+        public async Task<IActionResult> UploadProfileImage([FromBody][Required] UploadProfileImage model)
         {
             if (!ModelState.IsValid)
             {
