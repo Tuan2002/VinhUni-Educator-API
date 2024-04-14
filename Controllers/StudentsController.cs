@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -35,13 +36,13 @@ namespace VinhUni_Educator_API.Controllers
         [SwaggerOperation(Summary = "Lấy danh sách sinh viên có thể nhập vào hệ thống", Description = "Lấy danh sách sinh viên có thể nhập vào hệ thống theo lớp hành chính")]
         public async Task<IActionResult> GetImportableStudents(int classId)
         {
-            var response = await _studentServices.GetAImportableStudentsByClassAsync(classId);
+            var response = await _studentServices.GetImportableStudentsByClassAsync(classId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPost]
         [Route("import-students/{classId}")]
         [SwaggerOperation(Summary = "Nhập danh sách sinh viên vào hệ thống", Description = "Nhập danh sách sinh viên vào hệ thống theo lớp hành chính")]
-        public async Task<IActionResult> ImportStudents(int classId, [FromBody] List<ImportStudentModel> students)
+        public async Task<IActionResult> ImportStudents(int classId, [FromBody][Required] List<ImportStudentModel> students)
         {
             var response = await _studentServices.ImportStudentByClass(classId, students);
             return StatusCode(response.StatusCode, response);
@@ -73,7 +74,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("update-student/{studentId}")]
         [SwaggerOperation(Summary = "Cập nhật thông tin sinh viên", Description = "Cập nhật thông tin sinh viên")]
-        public async Task<IActionResult> UpdateStudent(int studentId, [FromBody] UpdateStudentModel model)
+        public async Task<IActionResult> UpdateStudent(int studentId, [FromBody][Required] UpdateStudentModel model)
         {
             var response = await _studentServices.UpdateStudentAsync(studentId, model);
             return StatusCode(response.StatusCode, response);
@@ -97,7 +98,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("link-account/{studentId}")]
         [SwaggerOperation(Summary = "Liên kết tài khoản sinh viên", Description = "Liên kết tài khoản người dùng với sinh viên")]
-        public async Task<IActionResult> LinkAccount(int studentId, [FromQuery] string userId)
+        public async Task<IActionResult> LinkAccount(int studentId, [FromQuery][Required] string userId)
         {
             var response = await _studentServices.LinkUserAccountAsync(studentId, userId);
             return StatusCode(response.StatusCode, response);
