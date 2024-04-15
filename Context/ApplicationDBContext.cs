@@ -66,5 +66,7 @@ namespace VinhUni_Educator_API.Context
         public DbSet<PrimaryClass> PrimaryClasses { get; set; }
         public DbSet<Student> Students { get; set; }
         public DbSet<Teacher> Teachers { get; set; }
+        public DbSet<SchoolYear> SchoolYears { get; set; }
+        public DbSet<Semester> Semesters { get; set; }
     }
 }

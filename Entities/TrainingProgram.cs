@@ -8,6 +8,7 @@ namespace VinhUni_Educator_API.Entities
     {
         [Key]
         public int Id { get; set; }
+        // ProgramId is the same as Id in the USmart School System
         public int ProgramId { get; set; }
         public string ProgramCode { get; set; } = null!;
         public string ProgramName { get; set; } = null!;

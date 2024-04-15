@@ -1,5 +1,4 @@
-
-namespace VinhUni_Educator_API.Entities
+namespace VinhUni_Educator_API.Models
 {
     public class StudentSyncModel
     {
