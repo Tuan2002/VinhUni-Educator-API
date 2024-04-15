@@ -61,6 +61,11 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.SSOId, opt => opt.MapFrom(src => int.Parse(src.userId)))
             .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.hS_Email));
             CreateMap<ImportTeacherModel, ImportTeacherViewModel>();
+
+            // Mapper for SchoolYear
+            CreateMap<SchoolYear, SchoolYearViewModel>();
+            CreateMap<Semester, SemesterViewModel>()
+            .ForMember(dest => dest.SchoolYearName, opt => opt.MapFrom(src => src.SchoolYear.SchoolYearName));
         }
     }
 }
