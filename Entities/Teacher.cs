@@ -7,6 +7,7 @@ namespace VinhUni_Educator_API.Entities
     {
         [Key]
         public int Id { get; set; }
+        // TeacherId is the same as Id in the USmart School System
         public int TeacherId { get; set; }
         public int TeacherCode { get; set; }
         public string? FirstName { get; set; } = null!;
