@@ -405,6 +405,7 @@ namespace VinhUni_Educator_API.Services.Managers
                 teacher.IsDeleted = true;
                 teacher.DeletedAt = DateTime.UtcNow;
                 teacher.DeletedBy = userId;
+                _context.Teachers.Update(teacher);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -439,6 +440,7 @@ namespace VinhUni_Educator_API.Services.Managers
                     };
                 }
                 teacher.IsDeleted = false;
+                _context.Teachers.Update(teacher);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -488,6 +490,7 @@ namespace VinhUni_Educator_API.Services.Managers
                 teacher.Dob = model.Dob ?? teacher.Dob;
                 teacher.Gender = model.Gender ?? teacher.Gender;
                 teacher.OrganizationId = model.OrganizationId ?? teacher.OrganizationId;
+                _context.Teachers.Update(teacher);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {

@@ -12,6 +12,7 @@ namespace VinhUni_Educator_API.Configs
         public const string SyncStudent = "Đồng bộ danh sách sinh viên";
         public const string SyncTeacher = "Đồng bộ danh sách giáo viên";
         public const string SyncClass = "Đồng bộ danh sách lớp hành chính";
+        public const string SyncModule = "Đồng bộ danh sách học phần";
 
     }
 }

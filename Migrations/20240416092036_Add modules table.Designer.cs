@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -11,9 +12,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240416092036_Add modules table")]
+    partial class Addmodulestable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -358,7 +361,7 @@ namespace VinhUni_Educator_API.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("ApplyYearId")
+                    b.Property<int>("ApplyYearId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("CreatedAt")
@@ -978,7 +981,9 @@ namespace VinhUni_Educator_API.Migrations
                 {
                     b.HasOne("VinhUni_Educator_API.Entities.SchoolYear", "ApplyYear")
                         .WithMany()
-                        .HasForeignKey("ApplyYearId");
+                        .HasForeignKey("ApplyYearId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("VinhUni_Educator_API.Entities.ApplicationUser", "CreatedBy")
                         .WithMany()

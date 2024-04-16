@@ -288,6 +288,7 @@ namespace VinhUni_Educator_API.Services
                 primaryClass.IsDeleted = true;
                 primaryClass.DeletedAt = DateTime.UtcNow;
                 primaryClass.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                _context.PrimaryClasses.Update(primaryClass);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -322,6 +323,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 primaryClass.IsDeleted = false;
+                _context.PrimaryClasses.Update(primaryClass);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {

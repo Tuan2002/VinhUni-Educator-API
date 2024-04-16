@@ -280,6 +280,7 @@ namespace VinhUni_Educator_API.Services
                 course.IsDeleted = true;
                 course.DeletedAt = DateTime.UtcNow;
                 course.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                _context.Courses.Update(course);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -315,7 +316,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 course.IsDeleted = false;
-                course.DeletedAt = null;
+                _context.Courses.Update(course);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -362,6 +363,7 @@ namespace VinhUni_Educator_API.Services
                 course.CourseCode = model.CourseCode ?? course.CourseCode;
                 course.CourseName = model.CourseName ?? course.CourseName;
                 course.StartYear = model.StartYear ?? course.StartYear;
+                _context.Courses.Update(course);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
