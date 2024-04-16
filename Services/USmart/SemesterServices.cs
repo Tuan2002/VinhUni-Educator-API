@@ -491,6 +491,7 @@ namespace VinhUni_Educator_API.Services
                 schoolYear.IsDeleted = true;
                 schoolYear.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
                 schoolYear.DeletedAt = DateTime.UtcNow;
+                _context.SchoolYears.Update(schoolYear);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -527,6 +528,7 @@ namespace VinhUni_Educator_API.Services
                 semester.IsDeleted = true;
                 semester.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
                 semester.DeletedAt = DateTime.UtcNow;
+                _context.Semesters.Update(semester);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -561,6 +563,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 schoolYear.IsDeleted = false;
+                _context.SchoolYears.Update(schoolYear);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -595,6 +598,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 semester.IsDeleted = false;
+                _context.Semesters.Update(semester);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
