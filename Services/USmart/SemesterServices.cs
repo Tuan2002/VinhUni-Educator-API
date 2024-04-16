@@ -19,9 +19,10 @@ namespace VinhUni_Educator_API.Services
         private readonly IConfiguration _config;
         private readonly ILogger<SemesterServices> _logger;
         private readonly IMapper _mapper;
+        private readonly ICacheServices _cacheServices;
         private const int DEFAULT_LIMIT = 10;
         private const int DEFAULT_PAGE = 1;
-        public SemesterServices(IJwtServices jwtServices, ApplicationDBContext context, IHttpContextAccessor httpContextAccessor, IConfiguration config, ILogger<SemesterServices> logger, IMapper mapper)
+        public SemesterServices(IJwtServices jwtServices, ApplicationDBContext context, IHttpContextAccessor httpContextAccessor, IConfiguration config, ILogger<SemesterServices> logger, IMapper mapper, ICacheServices cacheServices)
         {
             _jwtServices = jwtServices;
             _context = context;
@@ -29,6 +30,7 @@ namespace VinhUni_Educator_API.Services
             _config = config;
             _mapper = mapper;
             _logger = logger;
+            _cacheServices = cacheServices;
         }
 
         public async Task<ActionResponse> SyncSchoolYearsAsync()
@@ -242,16 +244,36 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetSchoolYearsAsync(int? pageIndex, int? limit)
+        public async Task<ActionResponse> GetSchoolYearsAsync(int? pageIndex, int? limit, bool skipCache)
         {
             try
             {
                 int currentPage = pageIndex ?? DEFAULT_PAGE;
                 int limitRows = limit ?? DEFAULT_LIMIT;
+                var schoolYears = null as PageList<SchoolYear, SchoolYearViewModel>;
                 var query = _context.SchoolYears.AsQueryable();
                 query = query.OrderByDescending(s => s.YearCode);
                 query = query.Where(s => s.IsDeleted == false);
-                var schoolYears = await PageList<SchoolYear, SchoolYearViewModel>.CreateWithMapperAsync(query, currentPage, limitRows, _mapper);
+                var cacheKey = $"SchoolYears_{currentPage}_{limitRows}";
+                if (skipCache == false)
+                {
+                    var cachedData = await _cacheServices.GetDataAsync<PageList<SchoolYear, SchoolYearViewModel>>(cacheKey);
+                    if (cachedData == null)
+                    {
+                        schoolYears = await PageList<SchoolYear, SchoolYearViewModel>.CreateWithMapperAsync(query, currentPage, limitRows, _mapper);
+                        _ = await _cacheServices.SetDataAsync(cacheKey, schoolYears, DateTime.UtcNow.AddDays(30));
+                    }
+                    schoolYears = cachedData ?? schoolYears;
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        IsSuccess = true,
+                        Message = "Lấy dữ liệu năm học thành công",
+                        Data = schoolYears
+                    };
+                }
+                schoolYears = await PageList<SchoolYear, SchoolYearViewModel>.CreateWithMapperAsync(query, currentPage, limitRows, _mapper);
+                _ = await _cacheServices.SetDataAsync(cacheKey, schoolYears, DateTime.UtcNow.AddDays(30));
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -268,6 +290,64 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi lấy dữ liệu năm học, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetDeletedSchoolYearsAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                int currentPage = pageIndex ?? DEFAULT_PAGE;
+                int limitRows = limit ?? DEFAULT_LIMIT;
+                var query = _context.SchoolYears.AsQueryable();
+                query = query.OrderByDescending(s => s.CreatedAt);
+                query = query.Where(s => s.IsDeleted == true);
+                var schoolYears = await PageList<SchoolYear, SchoolYearViewModel>.CreateWithMapperAsync(query, currentPage, limitRows, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy dữ liệu năm học đã xóa thành công",
+                    Data = schoolYears
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.GetDeletedSchoolYearsAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy dữ liệu năm học đã xóa, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetDeletedSemestersAsync(int? pageIndex, int? limit)
+        {
+            try
+            {
+                int currentPage = pageIndex ?? DEFAULT_PAGE;
+                int limitRows = limit ?? DEFAULT_LIMIT;
+                var query = _context.Semesters.AsQueryable();
+                query = query.OrderByDescending(s => s.CreatedAt);
+                query = query.Where(s => s.IsDeleted == true);
+                var semesters = await PageList<Semester, SemesterViewModel>.CreateWithMapperAsync(query, currentPage, limitRows, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy dữ liệu học kỳ đã xóa thành công",
+                    Data = semesters
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.GetDeletedSemestersAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy dữ liệu học kỳ đã xóa, vui lòng thử lại sau"
                 };
             }
         }
@@ -300,15 +380,47 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetSemestersBySchoolYearAsync(int schoolYearId)
+        public async Task<ActionResponse> GetSemestersBySchoolYearAsync(int schoolYearId, bool skipCache)
         {
             try
             {
+                var schoolYear = await _context.SchoolYears.AnyAsync(s => s.Id == schoolYearId || s.IsDeleted == false);
+                if (!schoolYear)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy năm học"
+                    };
+                }
                 var query = _context.Semesters.AsQueryable();
                 query = query.OrderBy(s => s.SemesterType);
                 query = query.Where(s => s.SchoolYearId == schoolYearId);
+                query = query.Where(s => s.IsDeleted == false);
+                var semesters = new List<SemesterViewModel>();
+                var cacheKey = $"Semesters_Year_{schoolYearId}";
+                if (skipCache == false)
+                {
+                    var cachedData = await _cacheServices.GetDataAsync<List<SemesterViewModel>>(cacheKey);
+                    if (cachedData == null)
+                    {
+                        var newRawSemesters = await query.ToListAsync();
+                        semesters = _mapper.Map<List<SemesterViewModel>>(newRawSemesters);
+                        if (semesters.Count > 0)
+                            _ = await _cacheServices.SetDataAsync(cacheKey, semesters, DateTime.UtcNow.AddDays(30));
+                    }
+                    semesters = cachedData ?? semesters;
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        IsSuccess = true,
+                        Message = "Lấy dữ liệu học kỳ thành công",
+                        Data = semesters
+                    };
+                }
                 var rawSemesters = await query.ToListAsync();
-                var semesters = _mapper.Map<List<SemesterViewModel>>(rawSemesters);
+                semesters = _mapper.Map<List<SemesterViewModel>>(rawSemesters);
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -325,6 +437,180 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi lấy dữ liệu học kỳ, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetSemesterByIdAsync(int semesterId)
+        {
+            try
+            {
+                var rawSemester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+                if (rawSemester is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy học kỳ"
+                    };
+                }
+                var semester = _mapper.Map<SemesterViewModel>(rawSemester);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy dữ liệu học kỳ thành công",
+                    Data = semester
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.GetSemesterByIdAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy dữ liệu học kỳ, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> DeleteSchoolYearAsync(int schoolYearId)
+        {
+            try
+            {
+                var schoolYear = await _context.SchoolYears.FirstOrDefaultAsync(s => s.Id == schoolYearId);
+                if (schoolYear is null || schoolYear.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy năm học hoặc năm học đã bị xóa"
+                    };
+                }
+                schoolYear.IsDeleted = true;
+                schoolYear.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                schoolYear.DeletedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Xóa năm học thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.DeleteSchoolYearAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi xóa năm học, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> DeleteSemesterAsync(int semesterId)
+        {
+            try
+            {
+                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+                if (semester is null || semester.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy học kỳ hoặc học kỳ đã bị xóa"
+                    };
+                }
+                semester.IsDeleted = true;
+                semester.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                semester.DeletedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Xóa học kỳ thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.DeleteSemesterAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi xóa học kỳ, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> RestoreSchoolYearAsync(int schoolYearId)
+        {
+            try
+            {
+                var schoolYear = await _context.SchoolYears.FirstOrDefaultAsync(s => s.Id == schoolYearId);
+                if (schoolYear is null || !schoolYear.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy năm học"
+                    };
+                }
+                schoolYear.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Khôi phục năm học thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.RestoreSchoolYearAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi khôi phục năm học, vui lòng thử lại sau"
+                };
+            }
+        }
+        public async Task<ActionResponse> RestoreSemesterAsync(int semesterId)
+        {
+            try
+            {
+                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+                if (semester is null || !semester.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy học kỳ"
+                    };
+                }
+                semester.IsDeleted = false;
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Khôi phục học kỳ thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in SemesterServices.RestoreSemesterAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse()
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi khôi phục học kỳ, vui lòng thử lại sau"
                 };
             }
         }
