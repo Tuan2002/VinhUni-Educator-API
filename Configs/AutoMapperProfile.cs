@@ -66,6 +66,10 @@ namespace VinhUni_Educator_API.Configs
             CreateMap<SchoolYear, SchoolYearViewModel>();
             CreateMap<Semester, SemesterViewModel>()
             .ForMember(dest => dest.SchoolYearName, opt => opt.MapFrom(src => src.SchoolYear.SchoolYearName));
+
+            // Mapper for Module
+            CreateMap<Module, ModuleViewModel>()
+            .ForMember(dest => dest.ApplyYearName, opt => opt.MapFrom(src => src.ApplyYear != null ? src.ApplyYear.SchoolYearName : null));
         }
     }
 }

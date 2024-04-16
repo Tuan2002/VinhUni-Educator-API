@@ -301,6 +301,7 @@ namespace VinhUni_Educator_API.Services
                 program.IsDeleted = true;
                 program.DeletedAt = DateTime.UtcNow;
                 program.DeletedBy = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                _context.TrainingPrograms.Update(program);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -335,6 +336,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 program.IsDeleted = false;
+                _context.TrainingPrograms.Update(program);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -397,6 +399,7 @@ namespace VinhUni_Educator_API.Services
                 program.StartYear = model.StartYear ?? program.StartYear;
                 program.TrainingYears = model.TrainingYears ?? program.TrainingYears;
                 program.MaxTrainingYears = model.MaxTrainingYears ?? program.MaxTrainingYears;
+                _context.TrainingPrograms.Update(program);
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
