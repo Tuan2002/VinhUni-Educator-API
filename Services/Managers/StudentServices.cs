@@ -187,6 +187,117 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> ImportStudentByCode(string studentCode)
+        {
+            try
+            {
+                var APIBaseURL = _config["VinhUNISmart:API"];
+                if (string.IsNullOrEmpty(APIBaseURL))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = 500,
+                        IsSuccess = false,
+                        Message = "Không thể tìm thấy địa chỉ API của hệ thống USmart trong cấu hình"
+                    };
+                }
+                var studentExist = await _context.Students.AnyAsync(x => x.StudentCode == studentCode);
+                if (studentExist)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Sinh viên đã tồn tại trong hệ thống"
+                    };
+                }
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn cần đăng nhập để thực hiện chức năng này"
+                    };
+                }
+                var smartToken = _context.USmartTokens.FirstOrDefault(x => x.UserId == userId);
+                var isTokenExpired = _jwtServices.IsTokenExpired(smartToken?.Token);
+                if (smartToken == null || isTokenExpired)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status403Forbidden,
+                        IsSuccess = false,
+                        Message = "Bạn cần đăng nhập bằng tài khoản SSO để thực hiện chức năng này"
+                    };
+                }
+                var fetch = new FetchData(APIBaseURL, smartToken.Token);
+                var response = await fetch.FetchAsync($"gwsg/dbnguoihoc/tbl_NguoiHoc_HoSo/GetByCode/{studentCode}", Method.Get);
+                if (response?.success == false)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy sinh viên"
+                    };
+                }
+                StudentSyncModel student = JsonSerializer.Deserialize<StudentSyncModel>(response?.data?.ToString());
+                if (student == null)
+                {
+                    throw new Exception("Cannot get student from USmart");
+                }
+                var course = await _context.Courses.FirstOrDefaultAsync(c => c.CourseCode == student.idKhoaHoc);
+                var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.ProgramCode == student.idNganh);
+                var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(c => c.ClassId == student.idLopHanhChinh);
+                if (course == null || program == null || primaryClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy khoá học hoặc ngành học"
+                    };
+                }
+                var newStudent = new Student
+                {
+                    StudentId = student.id,
+                    StudentCode = student.code,
+                    FirstName = student.ho,
+                    LastName = student.ten,
+                    Gender = ConvertGender.ConvertToInt(student.gioiTinh),
+                    Dob = DateOnly.FromDateTime(student.ngaySinh),
+                    ClassId = primaryClass.Id,
+                    ProgramId = program.Id,
+                    CourseId = course.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    IsSynced = true,
+                    CreatedById = userId,
+                    SmartId = int.Parse(student.userId)
+                };
+                await _context.Students.AddAsync(newStudent);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Nhập sinh viên thành công",
+                    Data = _mapper.Map<StudentViewModel>(newStudent)
+                };
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Error occurred while importing student by code: {e.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = 500,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi nhập sinh viên, vui lòng thử lại sau",
+                };
+            }
+        }
         public async Task<ActionResponse> ImportStudentByClass(int classId, List<ImportStudentModel> students)
         {
             try
@@ -338,12 +449,13 @@ namespace VinhUni_Educator_API.Services
                 var rawStudent = await _context.Students.FirstOrDefaultAsync(x => x.StudentCode == studentCode && x.IsDeleted == false);
                 if (rawStudent == null)
                 {
-                    return new ActionResponse
+                    var response = await ImportStudentByCode(studentCode);
+                    if (response.IsSuccess)
                     {
-                        StatusCode = StatusCodes.Status404NotFound,
-                        IsSuccess = false,
-                        Message = "Không tìm thấy sinh viên"
-                    };
+                        response.Message = "Lấy thông tin sinh viên thành công";
+                        return response;
+                    }
+                    return response;
                 }
                 var student = _mapper.Map<StudentViewModel>(rawStudent);
                 return new ActionResponse
