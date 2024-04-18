@@ -120,6 +120,7 @@ builder.Services.AddScoped<ITeacherServices, TeacherServices>();
 builder.Services.AddScoped<ISemesterServices, SemesterServices>();
 builder.Services.AddScoped<IModuleServices, ModuleServices>();
 builder.Services.AddScoped<IClassModuleServices, ClassModuleServices>();
+builder.Services.AddScoped<IClassManagerServices, ClassManagerServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {

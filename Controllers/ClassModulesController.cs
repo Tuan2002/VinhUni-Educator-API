@@ -12,12 +12,14 @@ namespace VinhUni_Educator_API.Controllers
     public class ClassModulesController : ControllerBase
     {
         private readonly IClassModuleServices _classModuleServices;
+        private readonly IClassManagerServices _classManagerServices;
         private const int DEFAULT_PAGE_INDEX = 1;
         private const int DEFAULT_LIMIT = 10;
         private const int DEFAULT_LIMIT_SEARCH = 10;
-        public ClassModulesController(IClassModuleServices classModuleServices)
+        public ClassModulesController(IClassModuleServices classModuleServices, IClassManagerServices classManagerServices)
         {
             _classModuleServices = classModuleServices;
+            _classManagerServices = classManagerServices;
         }
         [HttpPost]
         [Route("sync-by-admin")]
@@ -59,13 +61,28 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _classModuleServices.GetStudentsByModuleClass(moduleClassId);
             return StatusCode(response.StatusCode, response);
         }
-
         [HttpPost]
         [Route("sync-students/{moduleClassId}")]
         [SwaggerOperation("Đồng bộ sinh viên vào lớp học phần")]
         public async Task<IActionResult> SyncClassModuleStudentsAsync(string moduleClassId)
         {
             var response = await _classModuleServices.SyncClassModuleStudentsAsync(moduleClassId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPost]
+        [Route("add-student/{moduleClassId}")]
+        [SwaggerOperation("Thêm sinh viên vào lớp học phần")]
+        public async Task<IActionResult> AddStudentToClassAsync(string moduleClassId, [FromQuery] int studentId)
+        {
+            var response = await _classManagerServices.AddStudentToClassAsync(moduleClassId, studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpDelete]
+        [Route("remove-student/{moduleClassId}")]
+        [SwaggerOperation("Xóa sinh viên khỏi lớp học phần")]
+        public async Task<IActionResult> RemoveStudentFromClassAsync(string moduleClassId, [FromQuery] int studentId)
+        {
+            var response = await _classManagerServices.RemoveStudentFromClassAsync(moduleClassId, studentId);
             return StatusCode(response.StatusCode, response);
         }
     }

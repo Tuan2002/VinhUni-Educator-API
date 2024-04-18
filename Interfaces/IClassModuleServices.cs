@@ -10,5 +10,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> GetClassModulesAsync(int semesterId, int? pageIndex, int? limit);
         Task<ActionResponse> SyncClassModuleStudentsAsync(string moduleClassId);
         Task<ActionResponse> GetStudentsByModuleClass(string moduleClassId);
+        Task<ActionResponse> GetClassModuleAsync(string moduleClassId);
     }
 }
