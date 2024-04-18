@@ -319,6 +319,40 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetClassModuleAsync(string moduleClassId)
+        {
+            try
+            {
+                var moduleClass = await _context.ModuleClasses.FirstOrDefaultAsync(mc => mc.Id == moduleClassId);
+                if (moduleClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin lớp học phần"
+                    };
+                }
+                var classModule = _mapper.Map<ModuleClass, ClassModuleViewModel>(moduleClass);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy thông tin lớp học phần thành công",
+                    Data = classModule
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ClassModuleServices.GetClassModuleAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin lớp học phần"
+                };
+            }
+        }
         public async Task<ActionResponse> SyncClassModuleStudentsAsync(string moduleClassId)
         {
             try
