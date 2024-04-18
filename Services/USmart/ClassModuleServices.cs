@@ -385,12 +385,62 @@ namespace VinhUni_Educator_API.Services
                         Message = "Có lỗi xảy ra khi lấy danh sách sinh viên lớp học phần từ hệ thống USmart"
                     };
                 }
+                int countSuccess = 0;
+                int countFailed = 0;
+                foreach (var item in students)
+                {
+                    var student = await _context.Students.FirstOrDefaultAsync(s => s.StudentId == item.id);
+                    if (student == null)
+                    {
+                        var program = await _context.TrainingPrograms.FirstOrDefaultAsync(p => p.ProgramCode == item.idNganh);
+                        var course = await _context.Courses.FirstOrDefaultAsync(c => c.CourseCode == item.idKhoaHoc);
+                        var primaryClass = await _context.PrimaryClasses.FirstOrDefaultAsync(pc => pc.ClassId == item.idLopHanhChinh);
+                        if (course == null || program == null || primaryClass == null)
+                        {
+                            countFailed++;
+                            continue;
+                        }
+                        student = new Student
+                        {
+                            StudentId = item.id,
+                            StudentCode = item.code,
+                            FirstName = item.ho,
+                            LastName = item.ten,
+                            Gender = ConvertGender.ConvertToInt(item.gioiTinh),
+                            Dob = DateOnly.FromDateTime(item.ngaySinh),
+                            ClassId = primaryClass.Id,
+                            ProgramId = program.Id,
+                            CourseId = course.Id,
+                            CreatedAt = DateTime.UtcNow,
+                            IsSynced = true,
+                            CreatedById = user.Id,
+                            SmartId = int.Parse(item.userId)
+                        };
+                        await _context.Students.AddAsync(student);
+                        await _context.SaveChangesAsync();
+                    }
+                    var existStudent = await _context.ModuleClassStudents.AnyAsync(mcs => mcs.StudentId == student.Id && mcs.ModuleClassId == moduleClass.Id);
+                    if (!existStudent)
+                    {
+                        var newStudent = new ModuleClassStudent
+                        {
+                            StudentId = student.Id,
+                            ModuleClassId = moduleClass.Id,
+                            SemesterId = moduleClass.SemesterId,
+                            AddedAt = DateTime.UtcNow,
+                            AddedById = user.Id
+
+                        };
+                        await _context.ModuleClassStudents.AddAsync(newStudent);
+                        await _context.SaveChangesAsync();
+                        countSuccess++;
+                    }
+                }
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
-                    Message = "Đồng bộ sinh viên lớp học phần thành công",
-                    Data = students
+                    Message = countSuccess > 0 ? $"Đồng bộ thành công {countSuccess} sinh viên" : "Không có sinh viên nào được thêm vào lớp học phần",
                 };
             }
             catch (Exception ex)
@@ -401,6 +451,44 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi đồng bộ sinh viên lớp học phần"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentsByModuleClass(string moduleClassId)
+        {
+            try
+            {
+                var moduleClass = await _context.ModuleClasses.FirstOrDefaultAsync(mc => mc.Id == moduleClassId);
+                if (moduleClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin lớp học phần"
+                    };
+                }
+                var query = _context.ModuleClassStudents.AsQueryable();
+                query = query.Where(mcs => mcs.ModuleClassId == moduleClassId);
+                var rawStudents = await query.Select(mcs => mcs.Student).ToListAsync();
+                var students = _mapper.Map<List<Student>, List<StudentViewModel>>(rawStudents);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách sinh viên thành công",
+                    Data = students
+                };
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ClassModuleServices.GetStudentsByModuleClass: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách sinh viên"
                 };
             }
         }

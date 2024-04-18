@@ -12,25 +12,18 @@ namespace VinhUni_Educator_API.Configs
             CreateMap<RefreshToken, RefreshTokenModel>();
             CreateMap<ApplicationUser, PublicUserModel>();
             CreateMap<ApplicationUser, UserViewModel>();
-            CreateMap<Course, CourseViewModel>()
-            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
-            CreateMap<Major, MajorViewModel>()
-            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
+            CreateMap<Course, CourseViewModel>();
+            CreateMap<Major, MajorViewModel>();
             CreateMap<TrainingProgram, ProgramViewModel>()
             .ForMember(dest => dest.MajorName, opt => opt.MapFrom(src => src.Major.MajorName))
-            .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Course.CourseName))
-            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
+            .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Course.CourseName));
             CreateMap<PrimaryClass, ClassViewModel>()
             .ForMember(dest => dest.ProgramName, opt => opt.MapFrom(src => src.Program.ProgramName))
-            .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Course.CourseName))
-            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
-            CreateMap<Organization, OrganizationViewModel>()
-            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy.FirstName + " " + src.CreatedBy.LastName));
+            .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Course.CourseName));
+            CreateMap<Organization, OrganizationViewModel>();
 
             // Mapper for Student
             CreateMap<Student, StudentViewModel>()
-            .ForMember(dest => dest.CreatedByName, opt => opt.MapFrom(src => src.CreatedBy != null ? src.CreatedBy.FirstName + " " + src.CreatedBy.LastName : null))
-            .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User != null ? src.User.UserName : null))
             .ForMember(dest => dest.ClassName, opt => opt.MapFrom(src => src.PrimaryClass != null ? src.PrimaryClass.ClassName : null))
             .ForMember(dest => dest.ProgramName, opt => opt.MapFrom(src => src.TrainingProgram != null ? src.TrainingProgram.ProgramName : null))
             .ForMember(dest => dest.CourseName, opt => opt.MapFrom(src => src.Course.CourseName));
@@ -72,7 +65,9 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.ApplyYearName, opt => opt.MapFrom(src => src.ApplyYear != null ? src.ApplyYear.SchoolYearName : null));
 
             // Mapper for ModuleClass
-            CreateMap<ModuleClass, ClassModuleViewModel>();
+            CreateMap<ModuleClass, ClassModuleViewModel>()
+            .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
+            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Teacher.FirstName + " " + src.Teacher.LastName));
         }
     }
 }

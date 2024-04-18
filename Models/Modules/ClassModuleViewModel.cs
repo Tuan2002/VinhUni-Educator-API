@@ -6,7 +6,9 @@ namespace VinhUni_Educator_API.Models
         public string? ModuleClassCode { get; set; }
         public string? ModuleClassName { get; set; }
         public int? ModuleId { get; set; }
+        public string? ModuleName { get; set; }
         public int? TeacherId { get; set; }
+        public string? TeacherName { get; set; }
         public int? SemesterId { get; set; }
         public bool? IsChildClass { get; set; }
         public string? ParentClassId { get; set; }
