@@ -1,7 +1,7 @@
-
 using System.Security.Claims;
 using System.Text.Json;
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 using VinhUni_Educator_API.Context;
@@ -21,10 +21,11 @@ namespace VinhUni_Educator_API.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
         private readonly IMapper _mapper;
+        private readonly UserManager<ApplicationUser> _userManager;
         public const int DEFAULT_PAGE_SIZE = 10;
         public const int DEFAULT_PAGE_INDEX = 1;
         public const int DEFAULT_SEARCH_RESULT = 10;
-        public ClassModuleServices(ApplicationDBContext context, IConfiguration config, ILogger<ClassModuleServices> logger, IHttpContextAccessor httpContextAccessor, IJwtServices jwtServices, IMapper mapper)
+        public ClassModuleServices(ApplicationDBContext context, IConfiguration config, ILogger<ClassModuleServices> logger, IHttpContextAccessor httpContextAccessor, IJwtServices jwtServices, IMapper mapper, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _config = config;
@@ -32,8 +33,9 @@ namespace VinhUni_Educator_API.Services
             _httpContextAccessor = httpContextAccessor;
             _jwtServices = jwtServices;
             _mapper = mapper;
+            _userManager = userManager;
         }
-        public async Task<ActionResponse> SyncModulesByTeacherIdAsync(int teacherId, int semesterId)
+        public async Task<ActionResponse> SyncClassModulesByTeacherIdAsync(int teacherId, int semesterId)
         {
             try
             {
@@ -69,11 +71,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-                if (user == null)
-                {
-                    throw new Exception("Không thể xác định người dùng");
-                }
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw new Exception("Không thể xác định người dùng");
                 var uSmartToken = await _context.USmartTokens.FirstOrDefaultAsync(t => t.UserId == userId);
                 var isTokenExpired = _jwtServices.IsTokenExpired(uSmartToken?.Token);
                 if (uSmartToken == null || isTokenExpired)
@@ -126,7 +124,6 @@ namespace VinhUni_Educator_API.Services
                         var existClass = await _context.ModuleClasses.AnyAsync(mc => mc.ModuleClassId == classId);
                         if (existClass)
                         {
-                            countFailed++;
                             continue;
                         }
                         var responseData = await fetch.FetchAsync($"gwsg/dbdaotao_chinhquy/tbl_Tkb_LopHocPhan/{classId}");
@@ -135,7 +132,7 @@ namespace VinhUni_Educator_API.Services
                         {
                             throw new Exception("Có lỗi xảy ra khi lấy thông tin lớp học phần từ hệ thống USmart");
                         }
-                        var module = await _context.Modules.FirstOrDefaultAsync(m => m.ModuleId == classData.idHocPhan);
+                        var module = await _context.Modules.FirstOrDefaultAsync(m => m.ModuleId == classData.idHocPhan || m.ModuleCode == item.maHp);
                         if (module == null)
                         {
                             throw new Exception("Không tìm thấy thông tin học phần trong hệ thống");
@@ -176,18 +173,79 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
-                    Message = $"Đồng bộ thành công {countSuccess} lớp học phần, {countFailed} lớp học phần đã tồn tại",
+                    Message = countSuccess > 0 ? $"Đồng bộ thành công {countSuccess} lớp học phần" : "Không có lớp học phần nào được đồng bộ",
                 };
 
             }
             catch (Exception ex)
             {
+                _context.Database.RollbackTransaction();
                 _logger.LogError($"Error occurred in ClassModuleServices.SyncModulesByTeacherIdAsync: {ex.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
-                    Message = "Có lỗi xảy ra khi đồng bộ thời khóa biểu giảng viên từ hệ thống USmart"
+                    Message = "Có lỗi xảy ra khi đồng bộ lớp học phần từ hệ thống USmart"
+                };
+            }
+        }
+        public async Task<ActionResponse> SyncClassModulesByTeacher(int semesterId)
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn cần đăng nhập để thực hiện chức năng này"
+                    };
+                }
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw new Exception("Không thể xác định người dùng");
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains(AppRoles.Teacher))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status403Forbidden,
+                        IsSuccess = false,
+                        Message = "Tài khoản không phải là giảng viên"
+                    };
+                }
+                var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.UserId == userId);
+                if (teacher == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin giảng viên"
+                    };
+                }
+                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+                var schoolYearCode = semester?.SchoolYear.YearCode;
+                if (semester == null || schoolYearCode == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin học kỳ"
+                    };
+                }
+                var response = await SyncClassModulesByTeacherIdAsync(teacher.Id, semesterId);
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ClassModuleServices.SyncClassModulesByTeacher: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi đồng bộ lớp học phần"
                 };
             }
         }

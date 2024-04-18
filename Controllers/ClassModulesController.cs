@@ -19,11 +19,20 @@ namespace VinhUni_Educator_API.Controllers
         {
             _classModuleServices = classModuleServices;
         }
-        [HttpPost("sync-by-admin")]
+        [HttpPost]
+        [Route("sync-by-admin")]
         [SwaggerOperation("Đồng bộ danh mục lớp học phần theo giảng viên")]
         public async Task<IActionResult> SyncModulesByTeacherIdAsync([FromQuery] int teacherId, [FromQuery] int semesterId)
         {
-            var result = await _classModuleServices.SyncModulesByTeacherIdAsync(teacherId, semesterId);
+            var result = await _classModuleServices.SyncClassModulesByTeacherIdAsync(teacherId, semesterId);
+            return StatusCode(result.StatusCode, result);
+        }
+        [HttpPost]
+        [Route("sync-by-teacher")]
+        [SwaggerOperation("Đồng bộ danh mục lớp học phần của giảng viên")]
+        public async Task<IActionResult> SyncModulesByTeacherAsync([FromQuery] int semesterId)
+        {
+            var result = await _classModuleServices.SyncClassModulesByTeacher(semesterId);
             return StatusCode(result.StatusCode, result);
         }
         [HttpGet("get-by-teacher/{teacherId}")]
