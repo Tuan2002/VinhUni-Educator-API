@@ -289,5 +289,120 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetClassModulesAsync(int semesterId, int? pageIndex, int? limit)
+        {
+            try
+            {
+                var currentPage = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var currentSize = limit ?? DEFAULT_PAGE_SIZE;
+                var query = _context.ModuleClasses.AsQueryable();
+                query = query.Where(mc => mc.SemesterId == semesterId);
+                query = query.Where(mc => mc.IsDeleted == false);
+                query = query.OrderBy(mc => mc.CreatedAt);
+                var classModules = await PageList<ModuleClass, ClassModuleViewModel>.CreateWithMapperAsync(query, currentPage, currentSize, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lớp học phần thành công",
+                    Data = classModules
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ClassModuleServices.GetClassModulesAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lớp học phần"
+                };
+            }
+        }
+        public async Task<ActionResponse> SyncClassModuleStudentsAsync(string moduleClassId)
+        {
+            try
+            {
+                var APIBaseURL = _config["VinhUNISmart:API"];
+                if (string.IsNullOrEmpty(APIBaseURL))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Không thể tìm thấy địa chỉ API của hệ thống USmart trong cấu hình"
+                    };
+                }
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn cần đăng nhập để thực hiện chức năng này"
+                    };
+                }
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw new Exception("Không thể xác định người dùng");
+                var uSmartToken = await _context.USmartTokens.FirstOrDefaultAsync(t => t.UserId == userId);
+                var isTokenExpired = _jwtServices.IsTokenExpired(uSmartToken?.Token);
+                if (uSmartToken == null || isTokenExpired)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status403Forbidden,
+                        IsSuccess = false,
+                        Message = "Bạn không có quyền truy cập vào hệ thống USmart, vui lòng đăng nhập lại bằng tài khoản USmart"
+                    };
+                }
+                var moduleClass = await _context.ModuleClasses.FirstOrDefaultAsync(mc => mc.Id == moduleClassId);
+                if (moduleClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin lớp học phần"
+                    };
+                }
+                var fetch = new FetchData(APIBaseURL, uSmartToken.Token);
+                var formBody = @"{
+                                ""pageInfo"": {
+                                    ""page"": 1,
+                                    ""pageSize"": 1000
+                                },
+                                ""sorts"": [],
+                                ""filters"": []
+                                }";
+                var response = await fetch.FetchAsync($"gwsg/dbnguoihoc/tbl_NguoiHoc_HoSo/getPaged/LopHocPhan/{moduleClass.ModuleClassId}", null, formBody, Method.Post);
+                List<StudentSyncModel> students = JsonSerializer.Deserialize<List<StudentSyncModel>>(response?.data?.ToString());
+                if (response?.success == false || students is null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status500InternalServerError,
+                        IsSuccess = false,
+                        Message = "Có lỗi xảy ra khi lấy danh sách sinh viên lớp học phần từ hệ thống USmart"
+                    };
+                }
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Đồng bộ sinh viên lớp học phần thành công",
+                    Data = students
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ClassModuleServices.SyncClassModuleStudentsAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi đồng bộ sinh viên lớp học phần"
+                };
+            }
+        }
     }
 }
