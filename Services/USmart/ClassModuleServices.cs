@@ -289,6 +289,46 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetClassByStudentAsync(int studentId, int semesterId, int? pageIndex = DEFAULT_PAGE_INDEX, int? pageSize = DEFAULT_PAGE_SIZE)
+        {
+            try
+            {
+                var currentPage = pageIndex ?? DEFAULT_PAGE_INDEX;
+                var currentSize = pageSize ?? DEFAULT_PAGE_SIZE;
+                var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == studentId);
+                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
+                if (student == null || semester == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin sinh viên hoặc học kỳ"
+                    };
+                }
+                var query = _context.ModuleClassStudents.AsQueryable();
+                query = query.Where(mcs => mcs.StudentId == studentId && mcs.SemesterId == semesterId);
+                var classModulesQuery = query.Select(mcs => mcs.ModuleClass);
+                var classModules = await PageList<ModuleClass, ClassModuleViewModel>.CreateWithMapperAsync(classModulesQuery, currentPage, currentSize, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lớp học phần thành công",
+                    Data = classModules
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ClassModuleServices.GetClassModuleByStudentAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lớp học phần"
+                };
+            }
+        }
         public async Task<ActionResponse> GetClassModulesAsync(int semesterId, int? pageIndex, int? limit)
         {
             try
