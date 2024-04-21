@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
@@ -536,6 +537,92 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = ex.Message
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentProfileAsync()
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn chưa đăng nhập vào hệ thống"
+                    };
+                }
+                var rawStudent = await _context.Students.FirstOrDefaultAsync(x => x.UserId == userId);
+                if (rawStudent == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin sinh viên"
+                    };
+                }
+                var student = _mapper.Map<StudentViewModel>(rawStudent);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Data = student
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/GetStudentProfileAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin sinh viên"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetTeacherProfileAsync()
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn chưa đăng nhập vào hệ thống"
+                    };
+                }
+                var rawTeacher = await _context.Teachers.FirstOrDefaultAsync(x => x.UserId == userId);
+                if (rawTeacher == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin giảng viên"
+                    };
+                }
+                var teacher = _mapper.Map<TeacherViewModel>(rawTeacher);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Data = teacher
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error in AccountServices/GetTeacherProfileAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy thông tin giảng viên"
                 };
             }
         }
