@@ -13,5 +13,7 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> ResetPasswordAsync(ResetPasswordModel model);
         Task<ActionResponse> UpdateProfileAsync(UpdateProfileModel model);
         Task<ActionResponse> UploadProfileImageAsync(UploadProfileImage model);
+        Task<ActionResponse> GetStudentProfileAsync();
+        Task<ActionResponse> GetTeacherProfileAsync();
     }
 }

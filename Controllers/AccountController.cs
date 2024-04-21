@@ -27,6 +27,23 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _accountServices.GetCurrentUserAsync(skipCache);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet]
+        [Route("student-profile")]
+        [SwaggerOperation(Summary = "Lấy thông tin sinh viên", Description = "Lấy thông tin sinh viên")]
+        public async Task<IActionResult> GetStudentProfile()
+        {
+            var response = await _accountServices.GetStudentProfileAsync();
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("teacher-profile")]
+        [SwaggerOperation(Summary = "Lấy thông tin giảng viên", Description = "Lấy thông tin giảng viên")]
+        public async Task<IActionResult> GetTeacherProfile()
+        {
+            var response = await _accountServices.GetTeacherProfileAsync();
+            return StatusCode(response.StatusCode, response);
+        }
+
         [HttpPut]
         [Route("set-password")]
         [SwaggerOperation(Summary = "Thay đổi mật khẩu lần đầu", Description = "Thay đổi mật khẩu lần đầu sau khi đăng nhập tài khoản")]

@@ -46,6 +46,14 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
+        [Route("get-by-student/{studentId}")]
+        [SwaggerOperation("Lấy danh sách lớp học phần theo sinh viên")]
+        public async Task<IActionResult> GetClassByStudentAsync(int studentId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        {
+            var response = await _classModuleServices.GetClassByStudentAsync(studentId, semesterId, pageIndex, limit);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
         [Route("get-class-modules")]
         [SwaggerOperation("Lấy danh sách lớp học phần")]
         public async Task<IActionResult> GetClassModulesAsync([FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
