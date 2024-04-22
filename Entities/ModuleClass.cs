@@ -28,6 +28,7 @@ namespace VinhUni_Educator_API.Entities
         public DateTime CreatedAt { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
+        public virtual ICollection<ModuleClassStudent> ModuleClassStudents { get; set; } = null!;
 
     }
 }

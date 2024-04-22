@@ -71,5 +71,7 @@ namespace VinhUni_Educator_API.Context
         public DbSet<Module> Modules { get; set; }
         public DbSet<ModuleClass> ModuleClasses { get; set; }
         public DbSet<ModuleClassStudent> ModuleClassStudents { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<SharedCategory> SharedCategories { get; set; }
     }
 }

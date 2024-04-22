@@ -13,6 +13,7 @@ namespace VinhUni_Educator_API.Models
         public bool? IsChildClass { get; set; }
         public string? ParentClassId { get; set; }
         public int? MaxStudents { get; set; }
+        public int? CurrentStudents { get; set; }
         public DateTime? CreatedAt { get; set; }
         public bool? IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
