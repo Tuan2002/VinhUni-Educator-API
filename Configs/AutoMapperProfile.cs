@@ -67,7 +67,8 @@ namespace VinhUni_Educator_API.Configs
             // Mapper for ModuleClass
             CreateMap<ModuleClass, ClassModuleViewModel>()
             .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
-            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Teacher.FirstName + " " + src.Teacher.LastName));
+            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Teacher.FirstName + " " + src.Teacher.LastName))
+            .ForMember(dest => dest.CurrentStudents, opt => opt.MapFrom(src => src.ModuleClassStudents.Count));
         }
     }
 }
