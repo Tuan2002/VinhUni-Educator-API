@@ -69,6 +69,14 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
             .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Teacher.FirstName + " " + src.Teacher.LastName))
             .ForMember(dest => dest.CurrentStudents, opt => opt.MapFrom(src => src.ModuleClassStudents.Count));
+
+            // Mapper for category
+            CreateMap<Category, CategoryViewModel>()
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
+            .ForMember(dest => dest.IsShared, opt => opt.MapFrom(src => src.Owner.UserId != src.CreatedById))
+            .ForMember(dest => dest.IsSharing, opt => opt.MapFrom(src => src.ShareCategories.Count > 0))
+            .ForMember(dest => dest.SharedAt, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedAt).FirstOrDefault()))
+            .ForMember(dest => dest.ShareUntil, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedUntil).FirstOrDefault()));
         }
     }
 }
