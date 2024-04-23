@@ -238,13 +238,13 @@ namespace VinhUni_Educator_API.Services
             try
             {
                 var rawModule = await _context.Modules.FirstOrDefaultAsync(m => m.Id == moduleId);
-                if (rawModule == null)
+                if (rawModule == null || rawModule.IsDeleted == true)
                 {
                     return new ActionResponse
                     {
                         StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
-                        Message = "Không tìm thấy học phần này"
+                        Message = "Không tìm thấy học phần này hoặc học phần đã bị xóa"
                     };
                 }
                 var module = _mapper.Map<ModuleViewModel>(rawModule);
