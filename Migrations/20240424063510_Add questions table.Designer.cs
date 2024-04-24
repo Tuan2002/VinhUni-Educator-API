@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VinhUni_Educator_API.Context;
@@ -12,9 +13,11 @@ using VinhUni_Educator_API.Context;
 namespace VinhUni_Educator_API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20240424063510_Add questions table")]
+    partial class Addquestionstable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -708,9 +711,6 @@ namespace VinhUni_Educator_API.Migrations
                     b.Property<string>("CreatedById")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsShared")
                         .HasColumnType("boolean");
@@ -1427,7 +1427,7 @@ namespace VinhUni_Educator_API.Migrations
             modelBuilder.Entity("VinhUni_Educator_API.Entities.QuestionKit", b =>
                 {
                     b.HasOne("VinhUni_Educator_API.Entities.Category", "Category")
-                        .WithMany("QuestionKits")
+                        .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1633,8 +1633,6 @@ namespace VinhUni_Educator_API.Migrations
 
             modelBuilder.Entity("VinhUni_Educator_API.Entities.Category", b =>
                 {
-                    b.Navigation("QuestionKits");
-
                     b.Navigation("ShareCategories");
                 });
 

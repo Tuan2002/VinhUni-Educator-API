@@ -77,6 +77,13 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.IsSharing, opt => opt.MapFrom(src => src.ShareCategories.Count > 0))
             .ForMember(dest => dest.SharedAt, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedAt).FirstOrDefault()))
             .ForMember(dest => dest.ShareUntil, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedUntil).FirstOrDefault()));
+
+            // Mapper for question kit
+            CreateMap<QuestionKit, QuestionKitViewModel>()
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
+            .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.CategoryName))
+            .ForMember(dest => dest.ModifiedByName, opt => opt.MapFrom(src => src.ModifiedBy != null ? src.ModifiedBy.FirstName + " " + src.ModifiedBy.LastName : null))
+            .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.Questions.Count));
         }
     }
 }
