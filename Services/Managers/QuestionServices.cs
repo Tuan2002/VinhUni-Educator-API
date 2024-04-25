@@ -69,6 +69,8 @@ namespace VinhUni_Educator_API.Services
                     OwnerId = owner.Id,
                     CreatedById = userId,
                     CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                    ModifiedById = userId
                 };
                 await _context.QuestionKits.AddAsync(newQuestionKit);
                 await _context.SaveChangesAsync();
