@@ -84,6 +84,19 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.CategoryName))
             .ForMember(dest => dest.ModifiedByName, opt => opt.MapFrom(src => src.ModifiedBy != null ? src.ModifiedBy.FirstName + " " + src.ModifiedBy.LastName : null))
             .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.Questions.Count));
+
+            // Mapper for question
+            CreateMap<CreateQuestionModel, CreateQuestionResult>();
+            CreateMap<Question, QuestionViewModel>()
+            .ForMember(dest => dest.Answers, opt => opt.MapFrom(src => src.Answers.Select(a => new QuestionAnswerViewModel
+            {
+                Id = a.Id,
+                QuestionId = a.QuestionId,
+                AnswerContent = a.AnswerContent,
+                AnswerImage = a.AnswerImage,
+                IsCorrect = a.IsCorrect
+            }).ToList()));
+
         }
     }
 }

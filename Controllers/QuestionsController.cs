@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -17,12 +13,14 @@ namespace VinhUni_Educator_API.Controllers
     public class QuestionsController : ControllerBase
     {
         private readonly IQuestionServices _questionServices;
+        private readonly IQuestionManagerServices _questionManagerServices;
         private const int DEFAULT_PAGE_INDEX = 1;
         private const int DEFAULT_LIMIT = 10;
         private const int DEFAULT_LIMIT_SEARCH = 10;
-        public QuestionsController(IQuestionServices questionServices)
+        public QuestionsController(IQuestionServices questionServices, IQuestionManagerServices questionManagerServices)
         {
             _questionServices = questionServices;
+            _questionManagerServices = questionManagerServices;
         }
         [HttpPost]
         [Route("create-question-kit")]
@@ -79,6 +77,47 @@ namespace VinhUni_Educator_API.Controllers
         {
             var response = await _questionServices.UnShareQuestionKitAsync(questionKitId);
             return StatusCode(response.StatusCode, response);
+        }
+        [HttpPost]
+        [Route("import-questions/{questionKitId}")]
+        [SwaggerOperation(Summary = "Nhập câu hỏi", Description = "Nhập câu hỏi vào bộ câu hỏi")]
+        public async Task<IActionResult> ImportQuestionsAsync(string questionKitId, [FromBody] List<CreateQuestionModel> questions)
+        {
+            var response = await _questionManagerServices.ImportQuestionsAsync(questionKitId, questions);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("get-questions/{questionKitId}")]
+        [SwaggerOperation(Summary = "Lấy danh sách câu hỏi", Description = "Lấy danh sách câu hỏi theo bộ câu hỏi")]
+        public async Task<IActionResult> GetQuestionsNByKitAsync(string questionKitId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        {
+            var response = await _questionManagerServices.GetQuestionsNByKitAsync(questionKitId, pageIndex, limit);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("get-question/{questionId}")]
+        [SwaggerOperation(Summary = "Lấy thông tin câu hỏi", Description = "Lấy thông tin câu hỏi theo Id")]
+        public async Task<IActionResult> GetQuestionByIdAsync(string questionId)
+        {
+            var response = await _questionManagerServices.GetQuestionByIdAsync(questionId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("update-questions/{questionKitId}")]
+        [SwaggerOperation(Summary = "Cập nhật các câu hỏi", Description = "Cập nhật thông tin câu hỏi")]
+        public async Task<IActionResult> UpdateQuestionsByKitAsync(string questionKitId, [FromBody] List<UpdateQuestionModel> questionsToUpdate)
+        {
+            var response = await _questionManagerServices.UpdateQuestionsByKitAsync(questionKitId, questionsToUpdate);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpDelete]
+        [Route("delete-questions/{questionKitId}")]
+        [SwaggerOperation(Summary = "Xóa các câu hỏi", Description = "Xóa câu hỏi theo Id")]
+        public async Task<IActionResult> DeleteQuestionsAsync(string questionKitId, [FromBody] List<string> questionIds)
+        {
+            var response = await _questionManagerServices.DeleteQuestionsAsync(questionKitId, questionIds);
+            return StatusCode(response.StatusCode, response);
+
         }
     }
 }
