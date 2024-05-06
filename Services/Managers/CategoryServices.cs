@@ -442,7 +442,7 @@ namespace VinhUni_Educator_API.Services
                         continue;
                     }
                     var shared = await _context.SharedCategories.FirstOrDefaultAsync(x => x.CategoryId == categoryId && x.ViewerId == teacher.Id);
-                    if (shared != null)
+                    if (shared != null && (shared.SharedUntil >= DateOnly.FromDateTime(DateTime.UtcNow) || shared.SharedUntil == null))
                     {
                         shared.SharedAt = DateTime.UtcNow;
                         shared.SharedUntil = model.ShareUntil;
