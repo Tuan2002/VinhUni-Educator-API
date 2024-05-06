@@ -433,6 +433,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 int countShared = 0;
+                await _context.Database.BeginTransactionAsync();
                 foreach (var teacherId in model.TeacherIds)
                 {
                     var teacher = await _context.Teachers.FirstOrDefaultAsync(x => x.Id == teacherId);
@@ -440,23 +441,28 @@ namespace VinhUni_Educator_API.Services
                     {
                         continue;
                     }
-                    var isShared = await _context.SharedCategories.AnyAsync(x => x.CategoryId == categoryId && x.ViewerId == teacher.Id);
-                    if (!isShared)
+                    var shared = await _context.SharedCategories.FirstOrDefaultAsync(x => x.CategoryId == categoryId && x.ViewerId == teacher.Id);
+                    if (shared != null && (shared.SharedUntil >= DateOnly.FromDateTime(DateTime.UtcNow) || shared.SharedUntil == null))
                     {
-                        var sharedCategory = new SharedCategory
-                        {
-                            CategoryId = categoryId,
-                            ViewerId = teacher.Id,
-                            SharedById = owner.Id,
-                            SharedAt = DateTime.UtcNow,
-                            SharedUntil = model.ShareUntil
-                        };
-                        await _context.SharedCategories.AddAsync(sharedCategory);
+                        shared.SharedAt = DateTime.UtcNow;
+                        shared.SharedUntil = model.ShareUntil;
+                        _context.SharedCategories.Update(shared);
                         countShared++;
+                        continue;
                     }
-
+                    var sharedCategory = new SharedCategory
+                    {
+                        CategoryId = categoryId,
+                        ViewerId = teacher.Id,
+                        SharedById = owner.Id,
+                        SharedAt = DateTime.UtcNow,
+                        SharedUntil = model.ShareUntil
+                    };
+                    await _context.SharedCategories.AddAsync(sharedCategory);
+                    countShared++;
                 }
                 await _context.SaveChangesAsync();
+                await _context.Database.CommitTransactionAsync();
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -466,6 +472,7 @@ namespace VinhUni_Educator_API.Services
             }
             catch (Exception ex)
             {
+                _context.Database.RollbackTransaction();
                 _logger.LogError($"Error occurred in CategoryServices.ShareCategoryAsync: {ex.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
@@ -562,8 +569,10 @@ namespace VinhUni_Educator_API.Services
                 }
                 var query = _context.SharedCategories.AsQueryable();
                 query = query.Where(sc => sc.CategoryId == categoryId);
-                var teacherQuery = query.Select(sc => sc.Viewer);
-                var teachers = _mapper.Map<List<TeacherViewModel>>(teacherQuery);
+                query = query.OrderByDescending(sc => sc.SharedAt);
+                query = query.Where(sc => sc.SharedUntil == null || sc.SharedUntil >= DateOnly.FromDateTime(DateTime.UtcNow));
+                var rawTeachers = await query.ToListAsync();
+                var teachers = _mapper.Map<List<SharedCategoryViewModel>>(rawTeachers);
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,

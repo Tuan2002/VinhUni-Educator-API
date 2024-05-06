@@ -78,6 +78,14 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.SharedAt, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedAt).FirstOrDefault()))
             .ForMember(dest => dest.ShareUntil, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedUntil).FirstOrDefault()));
 
+            // Mapper for shared category
+            CreateMap<SharedCategory, SharedCategoryViewModel>()
+            .ForMember(dest => dest.SharedAt, opt => opt.MapFrom(src => src.SharedAt))
+            .ForMember(dest => dest.SharedUntil, opt => opt.MapFrom(src => src.SharedUntil))
+            .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
+            .ForMember(dest => dest.TeacherCode, opt => opt.MapFrom(src => src.Viewer.TeacherCode))
+            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Viewer.FirstName + " " + src.Viewer.LastName));
+
             // Mapper for question kit
             CreateMap<QuestionKit, QuestionKitViewModel>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
