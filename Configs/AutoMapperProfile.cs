@@ -83,6 +83,7 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.SharedAt, opt => opt.MapFrom(src => src.SharedAt))
             .ForMember(dest => dest.SharedUntil, opt => opt.MapFrom(src => src.SharedUntil))
             .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
+            .ForMember(dest => dest.TeacherId, opt => opt.MapFrom(src => src.ViewerId))
             .ForMember(dest => dest.TeacherCode, opt => opt.MapFrom(src => src.Viewer.TeacherCode))
             .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Viewer.FirstName + " " + src.Viewer.LastName));
 
