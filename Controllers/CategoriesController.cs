@@ -73,6 +73,14 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _categoryServices.DeleteCategoryAsync(categoryId);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpDelete]
+        [Route("delete-shared-category/{categoryId}")]
+        [SwaggerOperation(Summary = "Xóa danh mục được chia sẻ")]
+        public async Task<IActionResult> DeleteSharedCategory(string categoryId)
+        {
+            var response = await _categoryServices.DeleteSharedCategoryAsync(categoryId);
+            return StatusCode(response.StatusCode, response);
+        }
         [HttpPut]
         [Route("share-category/{categoryId}")]
         [SwaggerOperation(Summary = "Chia sẻ danh mục")]
@@ -84,9 +92,9 @@ namespace VinhUni_Educator_API.Controllers
         [HttpPut]
         [Route("unshare-category/{categoryId}")]
         [SwaggerOperation(Summary = "Hủy chia sẻ danh mục")]
-        public async Task<IActionResult> UnshareCategory(string categoryId, [FromBody] ShareCategoryModel model)
+        public async Task<IActionResult> UnshareCategory(string categoryId, [FromBody] ShareCategoryModel teachers)
         {
-            var response = await _categoryServices.ShareCategoryAsync(categoryId, model);
+            var response = await _categoryServices.UnShareCategoryAsync(categoryId, teachers);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]

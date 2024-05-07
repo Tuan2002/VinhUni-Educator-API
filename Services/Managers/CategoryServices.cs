@@ -380,6 +380,70 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> DeleteSharedCategoryAsync(string categoryId)
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Vui lòng đăng nhập để thực hiện thao tác này"
+                    };
+                }
+                var teacher = await _context.Teachers.FirstOrDefaultAsync(x => x.UserId == userId);
+                if (teacher == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin giảng viên"
+                    };
+                }
+                var category = await _context.Categories.FirstOrDefaultAsync(x => x.Id == categoryId);
+                if (category == null || category.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy danh mục hoặc danh mục đã bị xóa"
+                    };
+                }
+                var sharedCategory = await _context.SharedCategories.FirstOrDefaultAsync(x => x.CategoryId == categoryId && x.ViewerId == teacher.Id);
+                if (sharedCategory == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Danh mục không được chia sẻ cho bạn"
+                    };
+                }
+                _context.SharedCategories.Remove(sharedCategory);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Xoá danh mục được chia sẻ thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in CategoryServices.DeleteSharedCategory: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi danh mục được chia sẻ, vui lòng thử lại sau"
+                };
+            }
+        }
         public async Task<ActionResponse> ShareCategoryAsync(string categoryId, ShareCategoryModel model)
         {
             try
