@@ -195,63 +195,57 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy bộ câu hỏi hoặc bộ câu hỏi đã bị xóa"
                     };
                 }
-                switch (questionKit.IsShared)
+                var questionQuery = _context.Questions.AsQueryable();
+                questionQuery = questionQuery.Where(q => q.QuestionKitId == questionKitId);
+                questionQuery = questionQuery.OrderBy(q => q.Order);
+                if (questionKit.OwnerId == teacher.Id)
                 {
-                    case false:
-                        if (questionKit.CreatedById != userId)
-                        {
-                            return new ActionResponse
-                            {
-                                StatusCode = StatusCodes.Status403Forbidden,
-                                IsSuccess = false,
-                                Message = "Bạn không có quyền truy cập bộ câu hỏi này"
-                            };
-                        }
-                        var questionQuery = _context.Questions.AsQueryable();
-                        questionQuery = questionQuery.Where(q => q.QuestionKitId == questionKitId);
-                        questionQuery = questionQuery.OrderBy(q => q.Order);
-                        var questions = await PageList<Question, QuestionViewModel>.CreateWithMapperAsync(questionQuery, currentPageIndex, currentLimit, _mapper);
-                        return new ActionResponse
-                        {
-                            StatusCode = StatusCodes.Status200OK,
-                            IsSuccess = true,
-                            Message = "Lấy danh sách câu hỏi thành công",
-                            Data = questions
-                        };
-                    case true:
-                        var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == questionKit.CategoryId);
-                        if (category == null)
-                        {
-                            return new ActionResponse
-                            {
-                                StatusCode = StatusCodes.Status404NotFound,
-                                IsSuccess = false,
-                                Message = "Không tìm thấy danh mục câu hỏi"
-                            };
-                        }
-                        bool isShared = _context.SharedCategories.Any(sc => sc.CategoryId == category.Id && sc.ViewerId == teacher.Id);
-                        if (!isShared)
-                        {
-                            return new ActionResponse
-                            {
-                                StatusCode = StatusCodes.Status403Forbidden,
-                                IsSuccess = false,
-                                Message = "Bộ câu hỏi này đã được chia sẻ nhưng bạn không có quyền truy cập"
-                            };
-                        }
-                        questionQuery = _context.Questions.AsQueryable();
-                        questionQuery = questionQuery.Where(q => q.QuestionKitId == questionKitId);
-                        questionQuery = questionQuery.OrderBy(q => q.Order);
-                        questions = await PageList<Question, QuestionViewModel>.CreateWithMapperAsync(questionQuery, currentPageIndex, currentLimit, _mapper);
-                        return new ActionResponse
-                        {
-                            StatusCode = StatusCodes.Status200OK,
-                            IsSuccess = true,
-                            Message = "Lấy danh sách câu hỏi thành công",
-                            Data = questions
-                        };
-                    default:
+                    var myQuestions = await PageList<Question, QuestionViewModel>.CreateWithMapperAsync(questionQuery, currentPageIndex, currentLimit, _mapper);
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        IsSuccess = true,
+                        Message = "Lấy danh sách câu hỏi thành công",
+                        Data = myQuestions
+                    };
                 }
+                if (!questionKit.IsShared)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status403Forbidden,
+                        IsSuccess = false,
+                        Message = "Bộ câu hỏi này không được chia sẻ"
+                    };
+                }
+                var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == questionKit.CategoryId);
+                if (category == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy danh mục câu hỏi"
+                    };
+                }
+                bool isShared = _context.SharedCategories.Any(sc => sc.CategoryId == category.Id && sc.ViewerId == teacher.Id);
+                if (!isShared)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status403Forbidden,
+                        IsSuccess = false,
+                        Message = "Bộ câu hỏi này đã được chia sẻ nhưng bạn không có quyền truy cập"
+                    };
+                }
+                var questions = await PageList<Question, QuestionViewModel>.CreateWithMapperAsync(questionQuery, currentPageIndex, currentLimit, _mapper);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách câu hỏi thành công",
+                    Data = questions
+                };
             }
             catch (Exception ex)
             {
