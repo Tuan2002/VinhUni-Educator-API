@@ -106,6 +106,10 @@ namespace VinhUni_Educator_API.Configs
                 IsCorrect = a.IsCorrect
             }).ToList()));
 
+            // Mapper for exam
+            CreateMap<Exam, ExamViewModel>()
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
+            .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count));
         }
     }
 }

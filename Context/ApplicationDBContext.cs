@@ -76,5 +76,7 @@ namespace VinhUni_Educator_API.Context
         public DbSet<QuestionKit> QuestionKits { get; set; }
         public DbSet<Question> Questions { get; set; }
         public DbSet<QuestionAnswer> QuestionAnswers { get; set; }
+        public DbSet<Exam> Exams { get; set; }
+        public DbSet<ExamQuestion> ExamQuestions { get; set; }
     }
 }

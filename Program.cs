@@ -133,6 +133,7 @@ builder.Services.AddScoped<IClassManagerServices, ClassManagerServices>();
 builder.Services.AddScoped<ICategoryServices, CategoryServices>();
 builder.Services.AddScoped<IQuestionServices, QuestionServices>();
 builder.Services.AddScoped<IQuestionManagerServices, QuestionManagerServices>();
+builder.Services.AddScoped<IExamManagerServices, ExamManagerServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {
