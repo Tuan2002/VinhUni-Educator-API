@@ -59,6 +59,8 @@ namespace VinhUni_Educator_API.Services
                     OwnerId = teacher.Id,
                     CreatedAt = DateTime.UtcNow
                 };
+                await _context.Database.BeginTransactionAsync();
+                await _context.Exams.AddAsync(newExam);
                 if (model.QuestionIds != null && model.QuestionIds.Count > 0)
                 {
                     foreach (var questionId in model.QuestionIds)
@@ -73,14 +75,14 @@ namespace VinhUni_Educator_API.Services
                             QuestionKitId = question.QuestionKitId,
                             AddedAt = DateTime.UtcNow
                         };
-                        newExam.ExamQuestions.Add(examQuestion);
+                        await _context.ExamQuestions.AddAsync(examQuestion);
                     }
                 }
-                await _context.Exams.AddAsync(newExam);
                 await _context.SaveChangesAsync();
+                await _context.Database.CommitTransactionAsync();
                 return new ActionResponse
                 {
-                    StatusCode = StatusCodes.Status201Created,
+                    StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
                     Message = "Tạo đề thi thành công",
                     Data = _mapper.Map<ExamViewModel>(newExam)
@@ -88,6 +90,7 @@ namespace VinhUni_Educator_API.Services
             }
             catch (Exception ex)
             {
+                _context.Database.RollbackTransaction();
                 _logger.LogError($"Error occurred in ExamManagerServices.CreateExamAsync: {ex.Message} at {DateTime.UtcNow}");
                 return new ActionResponse
                 {
