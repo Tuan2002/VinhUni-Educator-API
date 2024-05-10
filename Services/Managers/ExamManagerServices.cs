@@ -296,9 +296,7 @@ namespace VinhUni_Educator_API.Services
                     Message = "Lấy danh sách câu hỏi của đề thi thành công",
                     Data = new
                     {
-                        ExamId = exam.Id,
-                        exam.ExamName,
-                        TotalQuestions = questions.Count,
+                        ExamInfo = _mapper.Map<ExamViewModel>(exam),
                         Questions = _mapper.Map<List<QuestionViewModel>>(questions)
                     }
                 };
