@@ -125,6 +125,8 @@ builder.Services.AddScoped<ICategoryServices, CategoryServices>();
 builder.Services.AddScoped<IQuestionServices, QuestionServices>();
 builder.Services.AddScoped<IQuestionManagerServices, QuestionManagerServices>();
 builder.Services.AddScoped<IExamManagerServices, ExamManagerServices>();
+builder.Services.AddScoped<IExamSeasonServices, ExamSeasonServices>();
+builder.Services.AddScoped<IStudentExamServices, StudentExamServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {
@@ -144,7 +146,6 @@ app.UseSwaggerUI(config =>
     config.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
 });
 app.UseCors(policyName);
-app.UseHttpsRedirection();
 app.UseMiddleware<VerifyRevokedToken>();
 app.UseAuthentication();
 app.UseAuthorization();

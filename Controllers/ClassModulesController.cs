@@ -13,13 +13,15 @@ namespace VinhUni_Educator_API.Controllers
     {
         private readonly IClassModuleServices _classModuleServices;
         private readonly IClassManagerServices _classManagerServices;
+        private readonly IExamSeasonServices _examSeasonServices;
         private const int DEFAULT_PAGE_INDEX = 1;
         private const int DEFAULT_LIMIT = 10;
         private const int DEFAULT_LIMIT_SEARCH = 10;
-        public ClassModulesController(IClassModuleServices classModuleServices, IClassManagerServices classManagerServices)
+        public ClassModulesController(IClassModuleServices classModuleServices, IClassManagerServices classManagerServices, IExamSeasonServices examSeasonServices)
         {
             _classModuleServices = classModuleServices;
             _classManagerServices = classManagerServices;
+            _examSeasonServices = examSeasonServices;
         }
         [HttpPost]
         [Route("sync-by-admin")]
@@ -99,6 +101,14 @@ namespace VinhUni_Educator_API.Controllers
         public async Task<IActionResult> RemoveStudentFromClassAsync(string moduleClassId, [FromQuery] int studentId)
         {
             var response = await _classManagerServices.RemoveStudentFromClassAsync(moduleClassId, studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("get-exam-seasons/{moduleClassId}")]
+        [SwaggerOperation("Lấy danh sách kỳ thi theo lớp học phần")]
+        public async Task<IActionResult> GetExamSeasonsByClassAsync(string moduleClassId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        {
+            var response = await _examSeasonServices.GetExamSeasonsByClassAsync(moduleClassId, semesterId, pageIndex, limit);
             return StatusCode(response.StatusCode, response);
         }
     }
