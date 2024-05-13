@@ -1,4 +1,5 @@
 using AutoMapper;
+using VinhUni_Educator_API.Constants;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
 using VinhUni_Educator_API.Models;
@@ -117,7 +118,10 @@ namespace VinhUni_Educator_API.Configs
             // Mapper for exam
             CreateMap<Exam, ExamViewModel>()
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
-            .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count));
+            .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count))
+            .ForMember(dest => dest.EasyQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count(q => q.Question.Level == QuestionLevels.Easy)))
+            .ForMember(dest => dest.MediumQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count(q => q.Question.Level == QuestionLevels.Medium)))
+            .ForMember(dest => dest.HardQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count(q => q.Question.Level == QuestionLevels.Hard)));
 
             // Mapper for exam season
             CreateMap<ExamSeason, ExamSeasonViewModel>();

@@ -13,5 +13,8 @@ namespace VinhUni_Educator_API.Models
         public string? OwnerName { get; set; }
         public bool? IsDeleted { get; set; }
         public int? TotalQuestions { get; set; }
+        public int? EasyQuestions { get; set; }
+        public int? MediumQuestions { get; set; }
+        public int? HardQuestions { get; set; }
     }
 }
