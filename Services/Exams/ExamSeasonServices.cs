@@ -542,7 +542,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> DeleteExamSeasonAsync(string examSeasonId)
+        public async Task<ActionResponse> DeleteExamSeasonAsync(string examSeasonId, bool foreverDelete = false)
         {
             try
             {
@@ -557,13 +557,24 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var examSeason = await _context.ExamSeasons.FirstOrDefaultAsync(x => x.Id == examSeasonId && x.CreatedById == userId);
-                if (examSeason == null || !examSeason.IsDeleted)
+                if (examSeason == null || examSeason.IsDeleted)
                 {
                     return new ActionResponse
                     {
                         StatusCode = StatusCodes.Status404NotFound,
                         IsSuccess = false,
                         Message = "Không tìm thấy kỳ thi"
+                    };
+                }
+                if (foreverDelete)
+                {
+                    _context.ExamSeasons.Remove(examSeason);
+                    await _context.SaveChangesAsync();
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        IsSuccess = true,
+                        Message = "Xóa kỳ thi thành công"
                     };
                 }
                 examSeason.IsDeleted = true;

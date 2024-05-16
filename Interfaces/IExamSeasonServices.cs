@@ -13,6 +13,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> RemoveClassFromExamSeasonAsync(string examSeasonId, List<string> moduleClassIds);
         Task<ActionResponse> ForceFinishExamSeasonAsync(string examSeasonId);
         Task<ActionResponse> UpdateExamSeasonAsync(string examSeasonId, UpdateSeasonModel model);
-        Task<ActionResponse> DeleteExamSeasonAsync(string examSeasonId);
+        Task<ActionResponse> DeleteExamSeasonAsync(string examSeasonId, bool foreverDelete = false);
     }
 }
