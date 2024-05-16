@@ -6,7 +6,7 @@ namespace VinhUni_Educator_API.Interfaces
     public interface IExamSeasonServices
     {
         Task<ActionResponse> CreateExamSeasonAsync(CreateSeasonModel model);
-        Task<ActionResponse> GetExamSeasonsByClassAsync(string moduleClassId, int semesterId, int? pageIndex, int? limit);
+        Task<ActionResponse> GetExamSeasonsByClassAsync(string moduleClassId, int? pageIndex, int? limit);
         Task<ActionResponse> GetExamSeasonByIdAsync(string examSeasonId);
         Task<ActionResponse> GetAssignClassAsync(string examSeasonId);
         Task<ActionResponse> AddClassToExamSeasonAsync(string examSeasonId, List<string> moduleClassIds);
