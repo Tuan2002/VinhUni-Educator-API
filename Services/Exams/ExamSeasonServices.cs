@@ -244,7 +244,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetExamSeasonsByClassAsync(string moduleClassId, int semesterId, int? pageIndex, int? limit)
+        public async Task<ActionResponse> GetExamSeasonsByClassAsync(string moduleClassId, int? pageIndex, int? limit)
         {
             try
             {

@@ -106,9 +106,9 @@ namespace VinhUni_Educator_API.Controllers
         [HttpGet]
         [Route("get-exam-seasons/{moduleClassId}")]
         [SwaggerOperation("Lấy danh sách kỳ thi theo lớp học phần")]
-        public async Task<IActionResult> GetExamSeasonsByClassAsync(string moduleClassId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        public async Task<IActionResult> GetExamSeasonsByClassAsync(string moduleClassId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
         {
-            var response = await _examSeasonServices.GetExamSeasonsByClassAsync(moduleClassId, semesterId, pageIndex, limit);
+            var response = await _examSeasonServices.GetExamSeasonsByClassAsync(moduleClassId, pageIndex, limit);
             return StatusCode(response.StatusCode, response);
         }
     }
