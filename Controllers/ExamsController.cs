@@ -137,9 +137,9 @@ namespace VinhUni_Educator_API.Controllers
         [HttpDelete]
         [Route("delete-season/{examSeasonId}")]
         [SwaggerOperation(Summary = "Xóa kỳ thi", Description = "Xóa kỳ thi")]
-        public async Task<IActionResult> DeleteSeasonAsync(string examSeasonId)
+        public async Task<IActionResult> DeleteSeasonAsync(string examSeasonId, bool foreverDelete = false)
         {
-            var response = await _examSeasonServices.DeleteExamSeasonAsync(examSeasonId);
+            var response = await _examSeasonServices.DeleteExamSeasonAsync(examSeasonId, foreverDelete);
             return StatusCode(response.StatusCode, response);
         }
     }
