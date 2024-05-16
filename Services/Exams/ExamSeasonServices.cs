@@ -248,8 +248,8 @@ namespace VinhUni_Educator_API.Services
         {
             try
             {
-                var classExists = await _context.ModuleClasses.AnyAsync(x => x.Id == moduleClassId);
-                if (!classExists)
+                var classModule = await _context.ModuleClasses.FirstOrDefaultAsync(x => x.Id == moduleClassId);
+                if (classModule == null)
                 {
                     return new ActionResponse
                     {
@@ -261,7 +261,7 @@ namespace VinhUni_Educator_API.Services
                 int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
                 var query = _context.ExamSeasons.AsQueryable();
-                query = query.Where(x => x.SemesterId == semesterId);
+                query = query.Where(x => x.SemesterId == classModule.SemesterId);
                 query = query.Where(x => x.AssignedClasses.Any(ac => ac.ModuleClassId == moduleClassId));
                 query = query.Where(x => x.IsDeleted == false);
                 var examSeasons = await PageList<ExamSeason, ExamSeasonViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
