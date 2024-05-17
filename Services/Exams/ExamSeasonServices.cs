@@ -147,6 +147,72 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> ChangeExamAsync(string examSeasonId, string examId)
+        {
+            try
+            {
+                var userId = _httpContextAccessor?.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        IsSuccess = false,
+                        Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
+                    };
+                }
+                var examSeason = await _context.ExamSeasons.FirstOrDefaultAsync(x => x.Id == examSeasonId && x.CreatedById == userId);
+                if (examSeason == null || examSeason.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy kỳ thi hoặc kỳ thi đã bị xóa"
+                    };
+                }
+                if (examSeason.StartTime < DateTime.UtcNow || examSeason.IsFinished || examSeason.EndTime < DateTime.UtcNow)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status400BadRequest,
+                        IsSuccess = false,
+                        Message = "Kỳ thi đã bắt đầu hoặc đã kết thúc, không thể thay đổi đề thi"
+                    };
+                }
+                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
+                if (exam == null || exam.IsDeleted || !exam.IsPublished)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy đề thi hoặc đề thi chưa được công bố"
+                    };
+                }
+                examSeason.ExamId = examId;
+                examSeason.UpdatedAt = DateTime.UtcNow;
+                _context.ExamSeasons.Update(examSeason);
+                await _context.SaveChangesAsync();
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Thay đổi đề thi thành công",
+                    Data = _mapper.Map<ExamSeasonDetailModel>(examSeason)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ExamSeasonServices.ChangeExamAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi thay đổi đề thi, vui lòng thử lại sau!"
+                };
+            }
+        }
         public async Task<ActionResponse> UpdateExamSeasonAsync(string examSeasonId, UpdateSeasonModel model)
         {
             try
@@ -180,16 +246,6 @@ namespace VinhUni_Educator_API.Services
                         Message = "Kỳ thi đã bắt đầu hoặc đã kết thúc, không thể cập nhật thông tin"
                     };
                 }
-                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == model.ExamId);
-                if (exam == null || exam.IsDeleted || !exam.IsPublished)
-                {
-                    return new ActionResponse
-                    {
-                        StatusCode = StatusCodes.Status404NotFound,
-                        IsSuccess = false,
-                        Message = "Không tìm thấy đề thi hoặc đề thi chưa được công bố"
-                    };
-                }
                 var semester = await _context.Semesters.FirstOrDefaultAsync(x => x.Id == model.SemesterId);
                 if (semester == null || semester.IsDeleted)
                 {
@@ -216,7 +272,6 @@ namespace VinhUni_Educator_API.Services
                 examSeason.EndTime = model.EndTime ?? examSeason.EndTime;
                 examSeason.DurationInMinutes = model.DurationInMinutes ?? examSeason.DurationInMinutes;
                 examSeason.SemesterId = model.SemesterId ?? examSeason.SemesterId;
-                examSeason.ExamId = model.ExamId ?? examSeason.ExamId;
                 examSeason.UsePassword = model.UsePassword ?? examSeason.UsePassword;
                 examSeason.ShowResult = model.ShowResult ?? examSeason.ShowResult;
                 examSeason.ShowPoint = model.ShowPoint ?? examSeason.ShowPoint;
@@ -655,6 +710,97 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status500InternalServerError,
                     IsSuccess = false,
                     Message = "Có lỗi xảy ra khi lấy danh sách thí sinh, vui lòng thử lại sau!"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentExamTurnsAsync(string examSeasonId, int studentId)
+        {
+            try
+            {
+                var examSeason = await _context.ExamSeasons.FirstOrDefaultAsync(x => x.Id == examSeasonId);
+                if (examSeason == null || examSeason.IsDeleted)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy kỳ thi hoặc kỳ thi đã bị xóa"
+                    };
+                }
+                var participant = await _context.ExamParticipants.FirstOrDefaultAsync(x => x.ExamSeasonId == examSeasonId && x.StudentId == studentId);
+                if (participant == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thí sinh trong kỳ thi"
+                    };
+                }
+                var rawExamTurns = await _context.ExamTurns.Where(x => x.ExamParticipantId == participant.Id).ToListAsync();
+                var examTurns = _mapper.Map<List<ExamTurnViewModel>>(rawExamTurns);
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy danh sách lượt thi thành công",
+                    Data = examTurns
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ExamSeasonServices.GetStudentExamTurnsAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy danh sách lượt thi, vui lòng thử lại sau!"
+                };
+            }
+        }
+        public async Task<ActionResponse> GetStudentExamResultAsync(string turnId)
+        {
+            try
+            {
+                var examTurn = await _context.ExamTurns.FirstOrDefaultAsync(x => x.Id == turnId);
+                if (examTurn == null || !examTurn.IsFinished)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin lượt thi hoặc lượt thi chưa hoàn thành"
+                    };
+                }
+                var rawExamResult = await _context.ExamResults.FirstOrDefaultAsync(x => x.ExamTurnId == turnId);
+                if (rawExamResult == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy kết quả thi"
+                    };
+                }
+                var rawExamResultDetails = rawExamResult.ExamResultDetails.ToList();
+                var examResult = _mapper.Map<ExamResultViewModel>(rawExamResult);
+                _ = rawExamResultDetails.Count > 0 ? examResult.ResultQuestions = _mapper.Map<List<StudentQuestionResult>>(rawExamResultDetails) : null;
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy kết quả thi thành công",
+                    Data = examResult
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ExamSeasonServices.GetStudentExamResult: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy kết quả thi, vui lòng thử lại sau!"
                 };
             }
         }
