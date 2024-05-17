@@ -4,7 +4,7 @@ namespace VinhUni_Educator_API.Models
     {
         public string? Id { get; set; }
         public string? ExamSeasonId { get; set; }
-        public string? StudentId { get; set; }
+        public int? StudentId { get; set; }
         public string? StudentCode { get; set; }
         public string? StudentName { get; set; }
         public DateTime? JoinedAt { get; set; }

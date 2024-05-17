@@ -150,6 +150,7 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.AveragePoint, opt => opt.MapFrom(src => src.ExamTurns.Where(t => t.IsFinished).Select(t => t.ExamResult != null ? t.ExamResult.TotalPoint : 0).Average()));
 
             // Mapper for exam turn
+            CreateMap<ExamTurn, ExamTurnViewModel>();
             CreateMap<ExamTurn, StudentExamTurnModel>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
             .ForMember(dest => dest.ExamSeasonCode, opt => opt.MapFrom(src => src.ExamSeason.SeasonCode))

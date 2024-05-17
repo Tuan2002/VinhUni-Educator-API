@@ -102,6 +102,14 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _examSeasonServices.GetAssignClassAsync(examSeasonId);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet]
+        [Route("get-participants/{examSeasonId}")]
+        [SwaggerOperation(Summary = "Lấy danh sách sinh viên đã tham gia thi", Description = "Lấy danh sách sinh viên đã tham gia thi")]
+        public async Task<IActionResult> GetParticipantsBySeasonAsync(string examSeasonId, string moduleClassId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT_SEARCH)
+        {
+            var response = await _examSeasonServices.GetParticipantsBySeasonAsync(examSeasonId, moduleClassId, pageIndex, limit);
+            return StatusCode(response.StatusCode, response);
+        }
         [HttpPut]
         [Route("assign-classes/{examSeasonId}")]
         [SwaggerOperation(Summary = "Thêm lớp vào kỳ thi", Description = "Thêm lớp vào kỳ thi")]
@@ -116,6 +124,14 @@ namespace VinhUni_Educator_API.Controllers
         public async Task<IActionResult> RemoveClassesFromSeasonAsync(string examSeasonId, [FromBody][SwaggerRequestBody("Danh sách mã lớp học phần", Required = true)] List<string> moduleClassIds)
         {
             var response = await _examSeasonServices.RemoveClassFromExamSeasonAsync(examSeasonId, moduleClassIds);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpPut]
+        [Route("change-exam/{examSeasonId}")]
+        [SwaggerOperation(Summary = "Thay đổi đề thi", Description = "Thay đổi đề thi")]
+        public async Task<IActionResult> ChangeExamAsync(string examSeasonId, string examId)
+        {
+            var response = await _examSeasonServices.ChangeExamAsync(examSeasonId, examId);
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
@@ -142,5 +158,22 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _examSeasonServices.DeleteExamSeasonAsync(examSeasonId, foreverDelete);
             return StatusCode(response.StatusCode, response);
         }
+        [HttpGet]
+        [Route("get-student-turns/{examSeasonId}")]
+        [SwaggerOperation(Summary = "Lấy danh sách lượt thi của sinh viên", Description = "Lấy danh sách lượt thi của sinh viên")]
+        public async Task<IActionResult> GetStudentExamTurnsAsync(string examSeasonId, int studentId)
+        {
+            var response = await _examSeasonServices.GetStudentExamTurnsAsync(examSeasonId, studentId);
+            return StatusCode(response.StatusCode, response);
+        }
+        [HttpGet]
+        [Route("get-exam-result/{turnId}")]
+        [SwaggerOperation(Summary = "Lấy kết quả lần thi của sinh viên", Description = "Lấy kết quả lần thi của sinh viên")]
+        public async Task<IActionResult> GetStudentExamResultAsync(string turnId)
+        {
+            var response = await _examSeasonServices.GetStudentExamResultAsync(turnId);
+            return StatusCode(response.StatusCode, response);
+        }
+
     }
 }

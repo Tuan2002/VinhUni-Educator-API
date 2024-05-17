@@ -20,8 +20,6 @@ namespace VinhUni_Educator_API.Models
         public int? DurationInMinutes { get; set; }
         [SwaggerSchema(Description = "Mã học kỳ")]
         public int? SemesterId { get; set; }
-        [SwaggerSchema(Description = "Mã đề thi")]
-        public string? ExamId { get; set; }
         [SwaggerSchema(Description = "Yêu cầu mật khẩu để tham gia thi")]
         public bool? UsePassword { get; set; }
         [SwaggerSchema(Description = "Cho phép làm lại")]
