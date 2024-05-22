@@ -185,6 +185,7 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.QuestionNote, opt => opt.MapFrom(src => src.Question.QuestionNote))
             .ForMember(dest => dest.QuestionImages, opt => opt.MapFrom(src => src.Question.QuestionImages))
             .ForMember(dest => dest.IsMultipleChoice, opt => opt.MapFrom(src => src.Question.IsMultipleChoice))
+            .ForMember(dest => dest.IsCorrect, opt => opt.MapFrom(src => src.IsCorrect))
             .ForMember(dest => dest.Answers, opt => opt.MapFrom(src => src.Question.Answers.Select(a => new QuestionAnswerResult
             {
                 Id = a.Id,

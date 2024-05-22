@@ -8,6 +8,7 @@ namespace VinhUni_Educator_API.Models
         public List<string>? QuestionImages { get; set; }
         public bool? IsMultipleChoice { get; set; }
         public int? Order { get; set; }
+        public bool? IsCorrect { get; set; }
         public List<QuestionAnswerResult>? Answers { get; set; }
     }
 }
