@@ -544,7 +544,7 @@ namespace VinhUni_Educator_API.Services
                         IsCorrect = false,
                     });
                 }
-                decimal POINT_PERQUESION = 10 / totalQuestions;
+                decimal POINT_PERQUESION = 10 / (decimal)totalQuestions;
                 decimal totalPoint = Math.Round(POINT_PERQUESION * countCorrectAnswers, 2);
                 examResult.TotalPoint = totalPoint;
                 examResult.UpdatedAt = DateTime.UtcNow;
