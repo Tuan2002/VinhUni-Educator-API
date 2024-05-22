@@ -469,7 +469,8 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var examTurn = await _context.ExamTurns.FirstOrDefaultAsync(x => x.Id == turnId && examParticipant.StudentId == student.Id && x.ExamSeasonId == examSeason.Id);
-                if (examTurn == null || examTurn.IsFinished || DateTime.UtcNow.AddMinutes(1) < examTurn.StartAt.AddMinutes(examSeason.DurationInMinutes))
+                // Set delay 1 minute to prevent student submit exam before exam turn start
+                if (examTurn == null || examTurn.IsFinished || DateTime.UtcNow > examTurn.StartAt.AddMinutes(examSeason.DurationInMinutes + 1))
                 {
                     return new ActionResponse
                     {
