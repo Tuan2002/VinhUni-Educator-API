@@ -14,8 +14,8 @@ namespace VinhUni_Educator_API.Entities
         public string QuestionId { get; set; } = null!;
         public virtual Question Question { get; set; } = null!;
         [ForeignKey("QuestionAnswer")]
-        public string SelectedAnswerId { get; set; } = null!;
-        public virtual QuestionAnswer SelectedAnswer { get; set; } = null!;
+        public string? SelectedAnswerId { get; set; }
+        public virtual QuestionAnswer? SelectedAnswer { get; set; }
         public bool IsCorrect { get; set; }
     }
 }
