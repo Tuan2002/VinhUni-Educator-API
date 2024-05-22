@@ -469,13 +469,13 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var examTurn = await _context.ExamTurns.FirstOrDefaultAsync(x => x.Id == turnId && examParticipant.StudentId == student.Id && x.ExamSeasonId == examSeason.Id);
-                if (examTurn == null || examTurn.IsFinished || examTurn.StartAt.AddMinutes(examSeason.DurationInMinutes) < DateTime.UtcNow.AddMinutes(2))
+                if (examTurn == null || examTurn.IsFinished || DateTime.UtcNow < examTurn.StartAt.AddMinutes(examSeason.DurationInMinutes + 1))
                 {
                     return new ActionResponse
                     {
-                        StatusCode = StatusCodes.Status404NotFound,
+                        StatusCode = StatusCodes.Status400BadRequest,
                         IsSuccess = false,
-                        Message = "Không tìm thấy thông tin lượt thi hoặc lượt thi đã kết thúc",
+                        Message = "Lượt thi của bạn đã kết thúc",
                     };
                 }
                 var currentExam = examSeason.Exam;
