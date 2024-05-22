@@ -193,15 +193,6 @@ namespace VinhUni_Educator_API.Services
                         Message = "Kỳ thi đã kết thúc, không thể tham gia",
                     };
                 }
-                if (DateTime.UtcNow.AddMinutes(examSeason.DurationInMinutes) > examSeason.EndTime)
-                {
-                    return new ActionResponse
-                    {
-                        StatusCode = StatusCodes.Status400BadRequest,
-                        IsSuccess = false,
-                        Message = "Kỳ thi sắp kết thúc, không thể tham gia",
-                    };
-                }
                 var examParticipant = await _context.ExamParticipants.FirstOrDefaultAsync(x => x.ExamSeasonId == examSeason.Id && x.StudentId == student.Id);
                 if (!examSeason.AllowRetry && examParticipant != null)
                 {
@@ -478,7 +469,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var examTurn = await _context.ExamTurns.FirstOrDefaultAsync(x => x.Id == turnId && examParticipant.StudentId == student.Id && x.ExamSeasonId == examSeason.Id);
-                if (examTurn == null || examTurn.IsFinished || examTurn.StartAt.AddMinutes(examSeason.DurationInMinutes) < DateTime.UtcNow.AddMinutes(1))
+                if (examTurn == null || examTurn.IsFinished || examTurn.StartAt.AddMinutes(examSeason.DurationInMinutes) < DateTime.UtcNow.AddMinutes(2))
                 {
                     return new ActionResponse
                     {
@@ -542,7 +533,15 @@ namespace VinhUni_Educator_API.Services
                                 });
                                 break;
                         }
+                        continue;
                     }
+                    examResultDetails.Add(new ExamResultDetail
+                    {
+                        ExamResultId = examResult.Id,
+                        QuestionId = question.Id,
+                        SelectedAnswerId = null,
+                        IsCorrect = false,
+                    });
                 }
                 decimal POINT_PERQUESION = 10 / totalQuestions;
                 decimal totalPoint = Math.Round(POINT_PERQUESION * countCorrectAnswers, 2);
