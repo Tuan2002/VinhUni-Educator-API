@@ -4,6 +4,7 @@ using System.Security.Claims;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using RestSharp;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
@@ -63,6 +64,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Tên người dùng hoặc mật khẩu không chính xác"
                     };
                 }
+                var loginProvider = "credential";
                 var userRoles = await _userManager.GetRolesAsync(user);
                 var tokenClaims = new List<Claim>
                 {
@@ -70,8 +72,10 @@ namespace VinhUni_Educator_API.Services
                     new Claim(ClaimTypes.Name, user.UserName ?? ""),
                     new Claim(type: "LastName", user.LastName ?? ""),
                     new Claim(type: "FirstName", user.FirstName ?? ""),
+                    new Claim(type: "LoginProvider", loginProvider)
                 };
                 tokenClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                tokenClaims.Add(new Claim(type: "roles", JsonConvert.SerializeObject(userRoles)));
                 var accessTokenResponse = _jwtServices.GenerateAccessToken(tokenClaims);
                 var refreshTokenResponse = _jwtServices.GenerateRefreshToken(tokenClaims);
                 if (accessTokenResponse == null || refreshTokenResponse == null)
@@ -221,7 +225,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Lỗi máy chủ, vui lòng thử lại sau"
                     };
                 }
-
+                var loginProvider = "sso";
                 var userRoles = await _userManager.GetRolesAsync(user);
                 var tokenClaims = new List<Claim>
                 {
@@ -229,8 +233,10 @@ namespace VinhUni_Educator_API.Services
                     new Claim(ClaimTypes.Name, user.UserName ?? ""),
                     new Claim(type: "LastName", user.LastName ?? ""),
                     new Claim(type: "FirstName", user.FirstName ?? ""),
+                    new Claim(type: "LoginProvider", loginProvider)
                 };
                 tokenClaims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+                tokenClaims.Add(new Claim(type: "roles", JsonConvert.SerializeObject(userRoles)));
                 var accessTokenResponse = _jwtServices.GenerateAccessToken(tokenClaims);
                 var refreshTokenResponse = _jwtServices.GenerateRefreshToken(tokenClaims);
                 if (accessTokenResponse == null || refreshTokenResponse == null)
