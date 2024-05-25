@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Interfaces;
 
 namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
-    [Authorize]
     [Route("api/[controller]")]
     [SwaggerTag("Các chức năng liên quan đến học kỳ, năm học")]
     public class SemestersController : ControllerBase
@@ -19,7 +19,7 @@ namespace VinhUni_Educator_API.Controllers
             _semesterServices = semesterServices;
         }
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("sync-school-years")]
         [SwaggerOperation(Summary = "Đồng bộ năm học từ hệ thống USmart", Description = "Đồng bộ năm học từ hệ thống USmart")]
         public async Task<IActionResult> SyncSchoolYears()
@@ -28,7 +28,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPost]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("sync-semesters")]
         [SwaggerOperation(Summary = "Đồng bộ học kỳ từ hệ thống USmart", Description = "Đồng bộ học kỳ từ hệ thống USmart")]
         public async Task<IActionResult> SyncSemesters()
@@ -83,7 +83,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpDelete]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("delete-semester/{semesterId}")]
         [SwaggerOperation(Summary = "Xóa học kỳ", Description = "Xóa học kỳ")]
         public async Task<IActionResult> DeleteSemester(int semesterId)
@@ -92,7 +92,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("restore-school-year/{schoolYearId}")]
         [SwaggerOperation(Summary = "Khôi phục năm học", Description = "Khôi phục năm học")]
         public async Task<IActionResult> RestoreSchoolYear(int schoolYearId)
@@ -101,7 +101,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("restore-semester/{semesterId}")]
         [SwaggerOperation(Summary = "Khôi phục học kỳ", Description = "Khôi phục học kỳ")]
         public async Task<IActionResult> RestoreSemester(int semesterId)
@@ -110,7 +110,8 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
+
         [Route("get-deleted-school-years")]
         [SwaggerOperation(Summary = "Lấy danh sách năm học đã xóa", Description = "Lấy danh sách năm học đã xóa")]
         public async Task<IActionResult> GetDeletedSchoolYears(int? pageIndex = DEFAULT_PAGE_INDEX, int? limit = DEFAULT_LIMIT)
@@ -119,7 +120,8 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
-        [Authorize]
+        [Authorize(Roles = AppRoles.Admin)]
+
         [Route("get-deleted-semesters")]
         [SwaggerOperation(Summary = "Lấy danh sách học kỳ đã xóa", Description = "Lấy danh sách học kỳ đã xóa")]
         public async Task<IActionResult> GetDeletedSemesters(int? pageIndex = DEFAULT_PAGE_INDEX, int? limit = DEFAULT_LIMIT)

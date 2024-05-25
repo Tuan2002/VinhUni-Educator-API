@@ -4,6 +4,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
+using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;

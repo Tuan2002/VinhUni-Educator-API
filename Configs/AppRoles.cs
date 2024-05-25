@@ -1,5 +1,5 @@
 
-namespace VinhUni_Educator_API.Entities
+namespace VinhUni_Educator_API.Configs
 {
     public static class AppRoles
     {

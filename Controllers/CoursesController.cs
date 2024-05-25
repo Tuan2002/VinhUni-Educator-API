@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Models;
 
@@ -21,6 +22,7 @@ namespace VinhUni_Educator_API.Controllers
             _courseServices = courseServices;
         }
         [HttpPost]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("sync")]
         [SwaggerOperation(Summary = "Đồng bộ danh sách khóa học", Description = "Đồng bộ danh sách khóa học từ hệ thống Đại học Vinh")]
         public async Task<IActionResult> SyncCoursesAsync()
@@ -53,6 +55,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpDelete]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("delete-course/{courseId}")]
         [SwaggerOperation(Summary = "Xóa khóa học", Description = "Xóa khóa học")]
         public async Task<IActionResult> DeleteCourseAsync(int courseId)
@@ -61,6 +64,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("restore-course/{courseId}")]
         [SwaggerOperation(Summary = "Khôi phục khóa học", Description = "Khôi phục khóa học")]
         public async Task<IActionResult> RestoreCourseAsync(int courseId)
@@ -69,6 +73,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPut]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("update-course/{courseId}")]
         [SwaggerOperation(Summary = "Cập nhật thông tin khóa học", Description = "Cập nhật thông tin khóa học")]
         public async Task<IActionResult> UpdateCourseAsync(int courseId, [FromBody] UpdateCourseModel model)

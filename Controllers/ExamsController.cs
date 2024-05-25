@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Models;
 
@@ -8,7 +9,7 @@ namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = AppRoles.Teacher)]
     [SwaggerTag("Quản lý thi của giáo viên")]
     public class ExamsController : ControllerBase
     {
