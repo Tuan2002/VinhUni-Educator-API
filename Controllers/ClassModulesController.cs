@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Interfaces;
 
 namespace VinhUni_Educator_API.Controllers
@@ -24,6 +25,7 @@ namespace VinhUni_Educator_API.Controllers
             _examSeasonServices = examSeasonServices;
         }
         [HttpPost]
+        [Authorize(Roles = AppRoles.Admin)]
         [Route("sync-by-admin")]
         [SwaggerOperation("Đồng bộ danh mục lớp học phần theo giảng viên")]
         public async Task<IActionResult> SyncModulesByTeacherIdAsync([FromQuery] int teacherId, [FromQuery] int semesterId)
@@ -32,6 +34,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPost]
+        [Authorize(Roles = AppRoles.Teacher)]
         [Route("sync-by-teacher")]
         [SwaggerOperation("Đồng bộ danh mục lớp học phần của giảng viên")]
         public async Task<IActionResult> SyncModulesByTeacherAsync([FromQuery] int semesterId)
@@ -40,6 +43,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [Route("get-by-teacher/{teacherId}")]
         [SwaggerOperation("Lấy danh sách lớp học phần theo giảng viên")]
         public async Task<IActionResult> GetClassByTeacherAsync(int teacherId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? pageSize = DEFAULT_LIMIT)
@@ -88,6 +92,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpPost]
+        [Authorize(Roles = AppRoles.Teacher)]
         [Route("add-student/{moduleClassId}")]
         [SwaggerOperation("Thêm sinh viên vào lớp học phần")]
         public async Task<IActionResult> AddStudentToClassAsync(string moduleClassId, [FromQuery] int studentId)
@@ -96,6 +101,7 @@ namespace VinhUni_Educator_API.Controllers
             return StatusCode(response.StatusCode, response);
         }
         [HttpDelete]
+        [Authorize(Roles = AppRoles.Teacher)]
         [Route("remove-student/{moduleClassId}")]
         [SwaggerOperation("Xóa sinh viên khỏi lớp học phần")]
         public async Task<IActionResult> RemoveStudentFromClassAsync(string moduleClassId, [FromQuery] int studentId)

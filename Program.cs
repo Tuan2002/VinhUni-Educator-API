@@ -91,6 +91,7 @@ builder.Services.AddAuthentication(options =>
         }
     };
 });
+// Add services to Data Protection
 builder.Services.AddDataProtection()
     .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration()
     {

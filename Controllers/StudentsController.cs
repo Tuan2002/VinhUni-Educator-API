@@ -2,13 +2,14 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Models;
 
 namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
     [Route("api/[controller]")]
     [SwaggerTag("Quản lý danh sách sinh viên")]
     public class StudentsController : ControllerBase
