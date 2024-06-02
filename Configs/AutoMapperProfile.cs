@@ -125,10 +125,9 @@ namespace VinhUni_Educator_API.Configs
 
             // Mapper for exam season
             CreateMap<ExamSeason, ExamSeasonViewModel>();
-            CreateMap<ExamSeason, StudentSeasonViewModel>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName));
+            CreateMap<ExamSeason, StudentSeasonViewModel>();
             CreateMap<ExamSeason, ExamSeasonDetailModel>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.GetFullName()))
             .ForMember(dest => dest.ExamName, opt => opt.MapFrom(src => src.Exam.ExamName))
             .ForMember(dest => dest.TotalClasses, opt => opt.MapFrom(src => src.AssignedClasses.Count));
 

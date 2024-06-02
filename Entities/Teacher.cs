@@ -30,5 +30,9 @@ namespace VinhUni_Educator_API.Entities
         public bool IsDeleted { get; set; } = false;
         public DateTime? DeletedAt { get; set; }
         public string? DeletedBy { get; set; }
+        public string GetFullName()
+        {
+            return $"{FirstName} {LastName}";
+        }
     }
 }

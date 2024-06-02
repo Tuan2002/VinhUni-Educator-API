@@ -40,7 +40,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var teacher = await _context.Teachers.FirstOrDefaultAsync(x => x.UserId == userId);
+                var teacher = await _context.Teachers.Where(x => x.UserId == userId).Select(t => new { t.Id }).FirstOrDefaultAsync();
                 if (teacher == null)
                 {
                     return new ActionResponse
@@ -65,7 +65,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     foreach (var questionId in model.QuestionIds)
                     {
-                        var question = await _context.Questions.FirstOrDefaultAsync(x => x.Id == questionId);
+                        var question = await _context.Questions.Select(q => new { q.Id, q.QuestionKitId }).FirstOrDefaultAsync(x => x.Id == questionId);
                         if (question == null)
                             continue;
                         var examQuestion = new ExamQuestion
@@ -266,7 +266,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
+                var exam = await _context.Exams.Select(e => new { e.Id, e.CreatedById, e.ExamName, e.ExamDescription, e.IsPublished, e.IsDeleted }).FirstOrDefaultAsync(x => x.Id == examId);
                 if (exam == null || exam.IsDeleted)
                 {
                     return new ActionResponse
@@ -296,7 +296,13 @@ namespace VinhUni_Educator_API.Services
                     Message = "Lấy danh sách câu hỏi của đề thi thành công",
                     Data = new
                     {
-                        ExamInfo = _mapper.Map<ExamViewModel>(exam),
+                        ExamInfo = new ExamViewModel
+                        {
+                            Id = exam.Id,
+                            ExamName = exam.ExamName,
+                            ExamDescription = exam.ExamDescription,
+                            IsPublished = exam.IsPublished,
+                        },
                         Questions = _mapper.Map<List<QuestionViewModel>>(questions)
                     }
                 };
@@ -326,7 +332,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
+                var exam = await _context.Exams.Select(e => new Exam { Id = e.Id, CreatedById = e.CreatedById, IsDeleted = e.IsDeleted, ExamQuestions = e.ExamQuestions.Select(q => new ExamQuestion { QuestionId = q.QuestionId }).ToList() }).FirstOrDefaultAsync(x => x.Id == examId);
                 if (exam == null || exam.IsDeleted)
                 {
                     return new ActionResponse
@@ -350,7 +356,7 @@ namespace VinhUni_Educator_API.Services
                 await _context.Database.BeginTransactionAsync();
                 foreach (var questionId in importableQuestionIds)
                 {
-                    var question = await _context.Questions.FirstOrDefaultAsync(x => x.Id == questionId);
+                    var question = await _context.Questions.Select(q => new { q.Id, q.QuestionKitId }).FirstOrDefaultAsync(x => x.Id == questionId);
                     if (question == null)
                         continue;
                     var examQuestion = new ExamQuestion
@@ -360,11 +366,11 @@ namespace VinhUni_Educator_API.Services
                         QuestionKitId = question.QuestionKitId,
                         AddedAt = DateTime.UtcNow
                     };
-                    exam.ExamQuestions.Add(examQuestion);
+                    await _context.ExamQuestions.AddAsync(examQuestion);
                     countSuccess++;
                 }
                 exam.UpdatedAt = DateTime.UtcNow;
-                _context.Exams.Update(exam);
+                _context.Exams.Entry(exam).Property(x => x.UpdatedAt).IsModified = true;
                 await _context.SaveChangesAsync();
                 await _context.Database.CommitTransactionAsync();
                 return new ActionResponse
@@ -372,7 +378,6 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
                     Message = $"Đã thêm {countSuccess} câu hỏi vào đề thi",
-                    Data = _mapper.Map<ExamViewModel>(exam)
                 };
             }
             catch (Exception ex)
@@ -401,7 +406,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
+                var exam = await _context.Exams.Select(e => new Exam { Id = e.Id, CreatedById = e.CreatedById, IsDeleted = e.IsDeleted, ExamQuestions = e.ExamQuestions.Select(q => new ExamQuestion { Id = q.Id, QuestionKitId = q.QuestionKitId, QuestionId = q.QuestionId }).ToList() }).FirstOrDefaultAsync(x => x.Id == examId);
                 if (exam == null || exam.IsDeleted)
                 {
                     return new ActionResponse
@@ -424,7 +429,7 @@ namespace VinhUni_Educator_API.Services
                 await _context.Database.BeginTransactionAsync();
                 _context.ExamQuestions.RemoveRange(removableQuestions);
                 exam.UpdatedAt = DateTime.UtcNow;
-                _context.Exams.Update(exam);
+                _context.Exams.Entry(exam).Property(x => x.UpdatedAt).IsModified = true;
                 await _context.SaveChangesAsync();
                 await _context.Database.CommitTransactionAsync();
                 return new ActionResponse
@@ -432,7 +437,6 @@ namespace VinhUni_Educator_API.Services
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
                     Message = $"Đã xóa {removableQuestions.Count} câu hỏi khỏi đề thi",
-                    Data = _mapper.Map<ExamViewModel>(exam)
                 };
             }
             catch (Exception ex)
