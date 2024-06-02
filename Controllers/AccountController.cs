@@ -22,7 +22,7 @@ namespace VinhUni_Educator_API.Controllers
         [HttpGet]
         [Route("me")]
         [SwaggerOperation(Summary = "Lấy thông tin người dùng hiện tại", Description = "Lấy thông tin người dùng hiện tại")]
-        public async Task<IActionResult> GetCurrentUser(bool? skipCache)
+        public async Task<IActionResult> GetCurrentUser(bool skipCache = false)
         {
             var response = await _accountServices.GetCurrentUserAsync(skipCache);
             return StatusCode(response.StatusCode, response);

@@ -381,22 +381,12 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetCurrentUserAsync(bool? skipCache = false)
+        public async Task<ActionResponse> GetCurrentUserAsync(bool skipCache = false)
         {
             try
             {
-                var userContext = _httpContextAccessor?.HttpContext?.User;
-                if (!userContext?.Identity?.IsAuthenticated ?? false || userContext == null)
-                {
-                    return new ActionResponse
-                    {
-                        StatusCode = StatusCodes.Status401Unauthorized,
-                        IsSuccess = false,
-                        Message = "Bạn chưa đăng nhập vào hệ thống"
-                    };
-                }
-                var userId = userContext?.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new Exception("User not found");
-                if (!skipCache ?? false)
+                var userId = _httpContextAccessor?.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new Exception("User not found");
+                if (!skipCache)
                 {
                     var currentUserInfo = await _cacheServices.GetDataAsync<PublicUserModel>($"USER-INFO_{userId}");
                     if (currentUserInfo == null)

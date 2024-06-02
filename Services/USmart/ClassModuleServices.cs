@@ -4,7 +4,6 @@ using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
-using VinhUni_Educator_API.Configs;
 using VinhUni_Educator_API.Context;
 using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Helpers;
@@ -21,20 +20,20 @@ namespace VinhUni_Educator_API.Services
         private readonly ILogger<ClassModuleServices> _logger;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IJwtServices _jwtServices;
+        private readonly ICacheServices _cacheServices;
         private readonly IMapper _mapper;
-        private readonly UserManager<ApplicationUser> _userManager;
         public const int DEFAULT_PAGE_SIZE = 10;
         public const int DEFAULT_PAGE_INDEX = 1;
         public const int DEFAULT_SEARCH_RESULT = 10;
-        public ClassModuleServices(ApplicationDBContext context, IConfiguration config, ILogger<ClassModuleServices> logger, IHttpContextAccessor httpContextAccessor, IJwtServices jwtServices, IMapper mapper, UserManager<ApplicationUser> userManager)
+        public ClassModuleServices(ApplicationDBContext context, IConfiguration config, ILogger<ClassModuleServices> logger, IHttpContextAccessor httpContextAccessor, IJwtServices jwtServices, ICacheServices cacheServices, IMapper mapper, UserManager<ApplicationUser> userManager)
         {
             _context = context;
             _config = config;
             _logger = logger;
             _httpContextAccessor = httpContextAccessor;
             _jwtServices = jwtServices;
+            _cacheServices = cacheServices;
             _mapper = mapper;
-            _userManager = userManager;
         }
         public async Task<ActionResponse> SyncClassModulesByTeacherIdAsync(int teacherId, int semesterId)
         {
@@ -204,18 +203,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId) ?? throw new Exception("Không thể xác định người dùng");
-                var roles = await _userManager.GetRolesAsync(user);
-                if (!roles.Contains(AppRoles.Teacher))
-                {
-                    return new ActionResponse
-                    {
-                        StatusCode = StatusCodes.Status403Forbidden,
-                        IsSuccess = false,
-                        Message = "Tài khoản không phải là giảng viên"
-                    };
-                }
-                var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.UserId == userId);
+                var teacher = await _context.Teachers.Select(t => new Teacher { Id = t.Id, UserId = t.UserId }).FirstOrDefaultAsync(t => t.UserId == userId);
                 if (teacher == null)
                 {
                     return new ActionResponse
@@ -225,9 +213,8 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy thông tin giảng viên"
                     };
                 }
-                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
-                var schoolYearCode = semester?.SchoolYear.YearCode;
-                if (semester == null || schoolYearCode == null)
+                var semester = await _context.Semesters.AnyAsync(s => s.Id == semesterId);
+                if (!semester)
                 {
                     return new ActionResponse
                     {
@@ -256,9 +243,9 @@ namespace VinhUni_Educator_API.Services
             {
                 var currentPage = pageIndex ?? DEFAULT_PAGE_INDEX;
                 var currentSize = pageSize ?? DEFAULT_PAGE_SIZE;
-                var teacher = await _context.Teachers.FirstOrDefaultAsync(t => t.Id == teacherId);
-                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
-                if (teacher == null || semester == null)
+                var teacher = await _context.Teachers.AnyAsync(t => t.Id == teacherId);
+                var semester = await _context.Semesters.AnyAsync(s => s.Id == semesterId);
+                if (!teacher || !semester)
                 {
                     return new ActionResponse
                     {
@@ -267,10 +254,23 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy thông tin giảng viên hoặc học kỳ"
                     };
                 }
+                string cacheKey = $"{teacherId}_{semesterId}_{currentPage}_{currentSize}";
+                var cacheData = await _cacheServices.GetDataAsync<PageList<ModuleClass, ClassModuleViewModel>>(cacheKey);
+                if (cacheData != null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        IsSuccess = true,
+                        Message = "Lấy danh sách lớp học phần thành công",
+                        Data = cacheData
+                    };
+                }
                 var query = _context.ModuleClasses.AsQueryable();
                 query = query.Where(mc => mc.TeacherId == teacherId && mc.SemesterId == semesterId);
                 query = query.Where(mc => mc.IsDeleted == false);
                 var classModules = await PageList<ModuleClass, ClassModuleViewModel>.CreateWithMapperAsync(query, currentPage, currentSize, _mapper);
+                _ = _cacheServices.SetDataAsync(cacheKey, classModules, DateTime.UtcNow.AddMinutes(10));
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -296,9 +296,9 @@ namespace VinhUni_Educator_API.Services
             {
                 var currentPage = pageIndex ?? DEFAULT_PAGE_INDEX;
                 var currentSize = pageSize ?? DEFAULT_PAGE_SIZE;
-                var student = await _context.Students.FirstOrDefaultAsync(s => s.Id == studentId);
-                var semester = await _context.Semesters.FirstOrDefaultAsync(s => s.Id == semesterId);
-                if (student == null || semester == null)
+                var student = await _context.Students.AnyAsync(s => s.Id == studentId);
+                var semester = await _context.Semesters.AnyAsync(s => s.Id == semesterId);
+                if (!student || !semester)
                 {
                     return new ActionResponse
                     {
@@ -307,10 +307,24 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy thông tin sinh viên hoặc học kỳ"
                     };
                 }
+                string cacheKey = $"{studentId}_{semesterId}_{currentPage}_{currentSize}";
+                var cacheData = await _cacheServices.GetDataAsync<PageList<ModuleClass, ClassModuleViewModel>>(cacheKey);
+                if (cacheData != null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        IsSuccess = true,
+                        Message = "Lấy danh sách lớp học phần thành công",
+                        Data = cacheData
+                    };
+                }
                 var query = _context.ModuleClassStudents.AsQueryable();
                 query = query.Where(mcs => mcs.StudentId == studentId && mcs.SemesterId == semesterId);
                 var classModulesQuery = query.Select(mcs => mcs.ModuleClass);
                 var classModules = await PageList<ModuleClass, ClassModuleViewModel>.CreateWithMapperAsync(classModulesQuery, currentPage, currentSize, _mapper);
+                _ = _cacheServices.SetDataAsync(cacheKey, classModules, DateTime.UtcNow.AddMinutes(10));
+
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,

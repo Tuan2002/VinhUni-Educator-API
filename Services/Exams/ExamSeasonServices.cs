@@ -41,7 +41,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var teacher = await _context.Teachers.FirstOrDefaultAsync(x => x.UserId == userId);
+                var teacher = await _context.Teachers.Where(x => x.UserId == userId).Select(t => new { t.Id }).FirstOrDefaultAsync();
                 if (teacher == null)
                 {
                     return new ActionResponse
@@ -180,7 +180,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Kỳ thi đã bắt đầu hoặc đã kết thúc, không thể thay đổi đề thi"
                     };
                 }
-                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
+                var exam = await _context.Exams.Where(x => x.Id == examId).Select(e => new { e.Id, e.IsDeleted, e.IsPublished }).FirstOrDefaultAsync();
                 if (exam == null || exam.IsDeleted || !exam.IsPublished)
                 {
                     return new ActionResponse
@@ -246,8 +246,8 @@ namespace VinhUni_Educator_API.Services
                         Message = "Kỳ thi đã bắt đầu hoặc đã kết thúc, không thể cập nhật thông tin"
                     };
                 }
-                var semester = await _context.Semesters.FirstOrDefaultAsync(x => x.Id == model.SemesterId);
-                if (semester == null || semester.IsDeleted)
+                var semester = await _context.Semesters.AnyAsync(x => x.Id == model.SemesterId);
+                if (!semester)
                 {
                     return new ActionResponse
                     {
@@ -303,7 +303,7 @@ namespace VinhUni_Educator_API.Services
         {
             try
             {
-                var classModule = await _context.ModuleClasses.FirstOrDefaultAsync(x => x.Id == moduleClassId);
+                var classModule = await _context.ModuleClasses.Select(x => new { x.Id, x.SemesterId }).FirstOrDefaultAsync(x => x.Id == moduleClassId);
                 if (classModule == null)
                 {
                     return new ActionResponse
@@ -320,6 +320,17 @@ namespace VinhUni_Educator_API.Services
                 query = query.Where(x => x.AssignedClasses.Any(ac => ac.ModuleClassId == moduleClassId));
                 query = query.Where(x => x.IsDeleted == false);
                 query = query.OrderByDescending(x => x.CreatedAt);
+                query = query.Select(x => new ExamSeason
+                {
+                    Id = x.Id,
+                    SeasonCode = x.SeasonCode,
+                    SeasonName = x.SeasonName,
+                    Description = x.Description,
+                    StartTime = x.StartTime,
+                    EndTime = x.EndTime,
+                    IsFinished = x.IsFinished,
+                    UpdatedAt = x.UpdatedAt,
+                });
                 var examSeasons = await PageList<ExamSeason, ExamSeasonViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
                 return new ActionResponse
                 {
@@ -387,8 +398,8 @@ namespace VinhUni_Educator_API.Services
         {
             try
             {
-                var examSeason = await _context.ExamSeasons.FirstOrDefaultAsync(x => x.Id == examSeasonId);
-                if (examSeason == null || examSeason.IsDeleted)
+                var examSeason = await _context.ExamSeasons.AnyAsync(x => x.Id == examSeasonId);
+                if (!examSeason)
                 {
                     return new ActionResponse
                     {
@@ -402,7 +413,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
-                    Message = "Lấy danh sách lớp học phần thành công",
+                    Message = "Lấy danh sách kỳ thi lớp học phần thành công",
                     Data = _mapper.Map<List<AssignedClassViewModel>>(assignedClasses)
                 };
             }
@@ -441,7 +452,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 var unAssignedClassIds = moduleClassIds.Where(x => !examSeason.AssignedClasses.Any(ac => ac.ModuleClassId == x)).ToList();
-                var assignableClasses = await _context.ModuleClasses.Where(x => unAssignedClassIds.Contains(x.Id)).ToListAsync();
+                var assignableClasses = await _context.ModuleClasses.Where(x => unAssignedClassIds.Contains(x.Id)).Select(c => new { c.Id }).ToListAsync();
                 if (assignableClasses.Count == 0)
                 {
                     return new ActionResponse
@@ -669,8 +680,8 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var examSeason = await _context.ExamSeasons.FirstOrDefaultAsync(x => x.Id == examSeasonId && x.CreatedById == userId);
-                if (examSeason == null || examSeason.IsDeleted)
+                var examSeason = await _context.ExamSeasons.AnyAsync(x => x.Id == examSeasonId && x.CreatedById == userId);
+                if (!examSeason)
                 {
                     return new ActionResponse
                     {
@@ -679,7 +690,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy kỳ thi hoặc kỳ thi đã bị xóa"
                     };
                 }
-                var assignedClass = await _context.ExamAssignedClasses.FirstOrDefaultAsync(x => x.ExamSeasonId == examSeasonId && x.ModuleClassId == moduleClassId);
+                var assignedClass = await _context.ExamAssignedClasses.Where(x => x.ExamSeasonId == examSeasonId && x.ModuleClassId == moduleClassId).Select(a => new { a.Id }).FirstOrDefaultAsync();
                 if (assignedClass == null)
                 {
                     return new ActionResponse
@@ -691,7 +702,7 @@ namespace VinhUni_Educator_API.Services
                 }
                 int currentPageIndex = pageIndex ?? DEFAULT_PAGE_INDEX;
                 int currentLimit = limit ?? DEFAULT_PAGE_SIZE;
-                var query = _context.ExamParticipants.AsQueryable();
+                var query = _context.ExamParticipants.AsQueryable().AsNoTracking();
                 query = query.Where(x => x.ExamSeasonId == examSeasonId);
                 query = query.Where(x => x.AssignedClassId == assignedClass.Id);
                 var participants = await PageList<ExamParticipant, ExamParticipantViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
@@ -718,8 +729,8 @@ namespace VinhUni_Educator_API.Services
         {
             try
             {
-                var examSeason = await _context.ExamSeasons.FirstOrDefaultAsync(x => x.Id == examSeasonId);
-                if (examSeason == null || examSeason.IsDeleted)
+                var examSeason = await _context.ExamSeasons.AnyAsync(x => x.Id == examSeasonId);
+                if (!examSeason)
                 {
                     return new ActionResponse
                     {
@@ -728,7 +739,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy kỳ thi hoặc kỳ thi đã bị xóa"
                     };
                 }
-                var participant = await _context.ExamParticipants.FirstOrDefaultAsync(x => x.ExamSeasonId == examSeasonId && x.StudentId == studentId);
+                var participant = await _context.ExamParticipants.Where(ep => ep.ExamSeasonId == examSeasonId && ep.StudentId == studentId).Select(x => new { x.Id }).FirstOrDefaultAsync();
                 if (participant == null)
                 {
                     return new ActionResponse
@@ -738,8 +749,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Không tìm thấy thí sinh trong kỳ thi"
                     };
                 }
-                var rawExamTurns = await _context.ExamTurns.Where(x => x.ExamParticipantId == participant.Id).ToListAsync();
-                var examTurns = _mapper.Map<List<ExamTurnViewModel>>(rawExamTurns);
+                var examTurns = await _context.ExamTurns.Where(x => x.ExamParticipantId == participant.Id).Select(et => new { et.Id, et.TurnNumber, et.IsFinished }).ToListAsync();
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -763,7 +773,7 @@ namespace VinhUni_Educator_API.Services
         {
             try
             {
-                var examTurn = await _context.ExamTurns.FirstOrDefaultAsync(x => x.Id == turnId);
+                var examTurn = await _context.ExamTurns.Select(et => new { et.Id, et.IsFinished }).FirstOrDefaultAsync(x => x.Id == turnId);
                 if (examTurn == null || !examTurn.IsFinished)
                 {
                     return new ActionResponse

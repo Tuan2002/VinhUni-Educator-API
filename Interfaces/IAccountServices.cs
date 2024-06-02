@@ -5,7 +5,7 @@ namespace VinhUni_Educator_API.Interfaces
 {
     public interface IAccountServices
     {
-        Task<ActionResponse> GetCurrentUserAsync(bool? skipCache = false);
+        Task<ActionResponse> GetCurrentUserAsync(bool skipCache = false);
         Task<ActionResponse> FirstChangePasswordAsync(ResetPasswordModel model);
         Task<ActionResponse> ChangePasswordAsync(ChangePasswordModel model);
         Task<ActionResponse> ForgotPasswordAsync(string email);
