@@ -24,6 +24,7 @@ namespace VinhUni_Educator_API.Controllers
 
         [HttpPost]
         [Route("sync")]
+        [Authorize(Roles = AppRoles.Admin)]
         [SwaggerOperation(Summary = "Đồng bộ danh sách đơn vị, phòng ban", Description = "Đồng bộ danh sách phòng ban từ hệ thống Đại học Vinh")]
         public async Task<IActionResult> SyncOrganizations()
         {
@@ -56,6 +57,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpDelete]
         [Route("delete-organization/{organizationId}")]
+        [Authorize(Roles = AppRoles.Admin)]
         [SwaggerOperation(Summary = "Xóa đơn vị, phòng ban", Description = "Xóa phòng ban khỏi hệ thống")]
         public async Task<IActionResult> DeleteOrganization(int organizationId)
         {
@@ -64,6 +66,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPut]
         [Route("update-organization/{organizationId}")]
+        [Authorize(Roles = AppRoles.Admin)]
         [SwaggerOperation(Summary = "Cập nhật thông tin đơn vị, phòng ban", Description = "Cập nhật thông tin phòng ban trong hệ thống")]
         public async Task<IActionResult> UpdateOrganization(int organizationId, [FromBody] UpdateOrganizationModel model)
         {
@@ -72,6 +75,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPut]
         [Route("restore-organization/{organizationId}")]
+        [Authorize(Roles = AppRoles.Admin)]
         [SwaggerOperation(Summary = "Khôi phục đơn vị, phòng ban", Description = "Khôi phục phòng ban đã xóa khỏi hệ thống")]
         public async Task<IActionResult> RestoreOrganization(int organizationId)
         {
