@@ -68,12 +68,12 @@ namespace VinhUni_Educator_API.Configs
             // Mapper for ModuleClass
             CreateMap<ModuleClass, ClassModuleViewModel>()
             .ForMember(dest => dest.ModuleName, opt => opt.MapFrom(src => src.Module.ModuleName))
-            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Teacher.FirstName + " " + src.Teacher.LastName))
+            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Teacher.GetFullName()))
             .ForMember(dest => dest.CurrentStudents, opt => opt.MapFrom(src => src.ModuleClassStudents.Count));
 
             // Mapper for category
             CreateMap<Category, CategoryViewModel>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.GetFullName()))
             .ForMember(dest => dest.IsShared, opt => opt.MapFrom(src => src.Owner.UserId != src.CreatedById))
             .ForMember(dest => dest.IsSharing, opt => opt.MapFrom(src => src.ShareCategories.Count > 0))
             .ForMember(dest => dest.SharedAt, opt => opt.MapFrom(src => src.ShareCategories.Where(sc => sc.CategoryId == src.Id).Select(sc => sc.SharedAt).FirstOrDefault()))
@@ -86,13 +86,13 @@ namespace VinhUni_Educator_API.Configs
             .ForMember(dest => dest.CategoryId, opt => opt.MapFrom(src => src.CategoryId))
             .ForMember(dest => dest.TeacherId, opt => opt.MapFrom(src => src.ViewerId))
             .ForMember(dest => dest.TeacherCode, opt => opt.MapFrom(src => src.Viewer.TeacherCode))
-            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Viewer.FirstName + " " + src.Viewer.LastName));
+            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.Viewer.GetFullName()));
 
             // Mapper for question kit
             CreateMap<QuestionKit, QuestionKitViewModel>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.GetFullName()))
             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Category.CategoryName))
-            .ForMember(dest => dest.ModifiedByName, opt => opt.MapFrom(src => src.ModifiedBy != null ? src.ModifiedBy.FirstName + " " + src.ModifiedBy.LastName : null))
+            .ForMember(dest => dest.ModifiedByName, opt => opt.MapFrom(src => src.ModifiedBy != null ? src.ModifiedBy.GetFullName() : null))
             .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.Questions.Count));
 
             // Mapper for question
@@ -117,7 +117,6 @@ namespace VinhUni_Educator_API.Configs
 
             // Mapper for exam
             CreateMap<Exam, ExamViewModel>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => src.Owner.FirstName + " " + src.Owner.LastName))
             .ForMember(dest => dest.TotalQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count))
             .ForMember(dest => dest.EasyQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count(q => q.Question.Level == QuestionLevels.Easy)))
             .ForMember(dest => dest.MediumQuestions, opt => opt.MapFrom(src => src.ExamQuestions.Count(q => q.Question.Level == QuestionLevels.Medium)))
@@ -133,8 +132,7 @@ namespace VinhUni_Educator_API.Configs
 
             // Mapper for exam assigned class
             CreateMap<ExamAssignedClass, AssignedClassViewModel>()
-            .ForMember(dest => dest.ModuleClassName, opt => opt.MapFrom(src => src.ModuleClass.ModuleClassName))
-            .ForMember(dest => dest.TeacherName, opt => opt.MapFrom(src => src.ModuleClass.Teacher.FirstName + " " + src.ModuleClass.Teacher.LastName));
+            .ForMember(dest => dest.ModuleClassName, opt => opt.MapFrom(src => src.ModuleClass.ModuleClassName));
 
             // Mapper for exam participant
             CreateMap<ExamParticipant, ExamParticipantViewModel>()

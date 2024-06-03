@@ -402,7 +402,7 @@ namespace VinhUni_Educator_API.Services
                 {
                     StatusCode = StatusCodes.Status200OK,
                     IsSuccess = true,
-                    Message = "Lấy danh sách kỳ thi lớp học phần thành công",
+                    Message = "Lấy danh sách lớp tham gia thành công",
                     Data = _mapper.Map<List<AssignedClassViewModel>>(assignedClasses)
                 };
             }

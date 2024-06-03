@@ -18,5 +18,9 @@ namespace VinhUni_Educator_API.Entities
         public DateTime? DeletedAt { get; set; }
         public string? DeletedBy { get; set; }
         public virtual ICollection<RefreshToken>? RefreshTokens { get; set; }
+        public string GetFullName()
+        {
+            return $"{FirstName} {LastName}";
+        }
     }
 }
