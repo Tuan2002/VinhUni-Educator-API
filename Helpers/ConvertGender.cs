@@ -13,5 +13,14 @@ namespace VinhUni_Educator_API.Helpers
                 _ => 2,
             };
         }
+        public static string ConvertToString(int? gender)
+        {
+            return gender switch
+            {
+                1 => "Nam",
+                0 => "Nữ",
+                _ => "Khác"
+            };
+        }
     }
 }
