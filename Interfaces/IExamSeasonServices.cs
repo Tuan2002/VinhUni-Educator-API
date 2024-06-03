@@ -18,5 +18,6 @@ namespace VinhUni_Educator_API.Interfaces
         Task<ActionResponse> ChangeExamAsync(string examSeasonId, string examId);
         Task<ActionResponse> GetStudentExamTurnsAsync(string examSeasonId, int studentId);
         Task<ActionResponse> GetStudentExamResultAsync(string turnId);
+        Task<ActionResponse> GetExamSeasonReportAsync(string examSeasonId, string moduleClassId);
     }
 }

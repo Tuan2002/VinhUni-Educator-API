@@ -804,6 +804,89 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
+        public async Task<ActionResponse> GetExamSeasonReportAsync(string examSeasonId, string moduleClassId)
+        {
+            try
+            {
+                var examSeason = await _context.ExamSeasons.Where(x => x.Id == examSeasonId).Select(x => new { x.Id, x.SeasonName }).FirstOrDefaultAsync();
+                if (examSeason == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin kỳ thi"
+                    };
+                }
+                bool isAssigned = await _context.ExamAssignedClasses.AnyAsync(x => x.ExamSeasonId == examSeasonId && x.ModuleClassId == moduleClassId);
+                if (!isAssigned)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Lớp học phần không thuộc kỳ thi này"
+                    };
+                }
+                var moduleClass = await _context.ModuleClasses.Where(x => x.Id == moduleClassId).Select(m => new ModuleClass { Id = m.Id, ModuleClassCode = m.ModuleClassCode, ModuleClassName = m.ModuleClassName, Teacher = new Teacher { FirstName = m.Teacher.FirstName, LastName = m.Teacher.LastName } }).FirstOrDefaultAsync();
+                if (moduleClass == null)
+                {
+                    return new ActionResponse
+                    {
+                        StatusCode = StatusCodes.Status404NotFound,
+                        IsSuccess = false,
+                        Message = "Không tìm thấy thông tin lớp học phần"
+                    };
+                }
+                var examParticipants = await _context.ExamParticipants.Where(x => x.ExamSeasonId == examSeasonId && x.AssignedClass.ModuleClassId == moduleClassId).Select(ep => new { ep.Id, ep.StudentId }).ToListAsync();
+                var reportStudentResults = new List<StudentResult>();
+                foreach (var examParicipant in examParticipants)
+                {
+                    var student = await _context.Students.Where(x => x.Id == examParicipant.StudentId).Select(s => new { s.StudentCode, s.FirstName, s.LastName, s.Gender, s.Dob }).FirstOrDefaultAsync();
+                    var examTurns = await _context.ExamTurns.Where(x => x.ExamParticipantId == examParicipant.Id && x.IsFinished).Select(et => new { et.Id }).ToListAsync();
+                    decimal highestPoint = await _context.ExamResults.Where(x => examTurns.Select(et => et.Id).Contains(x.ExamTurnId)).MaxAsync(x => x.TotalPoint);
+                    decimal averagePoint = await _context.ExamResults.Where(x => examTurns.Select(et => et.Id).Contains(x.ExamTurnId)).AverageAsync(x => x.TotalPoint);
+                    var studentResult = new StudentResult
+                    {
+                        StudentCode = student?.StudentCode,
+                        FirstName = student?.FirstName,
+                        LastName = student?.LastName,
+                        Dob = student?.Dob,
+                        Gender = ConvertGender.ConvertToString(student?.Gender),
+                        HighestPoint = Math.Round(highestPoint, 2),
+                        AveragePoint = Math.Round(averagePoint, 2),
+                        TotalTurns = examTurns.Count
+                    };
+                    reportStudentResults.Add(studentResult);
+                }
+                var report = new ExamSeasonReportModel
+                {
+                    ExamSeasonName = examSeason.SeasonName,
+                    ModuleClassCode = moduleClass.ModuleClassCode,
+                    ModuleClassName = moduleClass.ModuleClassName,
+                    TeacherName = moduleClass.Teacher.GetFullName(),
+                    ExportedAt = DateTime.UtcNow,
+                    Records = reportStudentResults
+                };
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    IsSuccess = true,
+                    Message = "Lấy báo cáo kỳ thi thành công",
+                    Data = report
+                };
 
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error occurred in ExamSeasonServices.GetExamSeasonReportAsync: {ex.Message} at {DateTime.UtcNow}");
+                return new ActionResponse
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    IsSuccess = false,
+                    Message = "Có lỗi xảy ra khi lấy báo cáo kỳ thi, vui lòng thử lại sau!"
+                };
+            }
+        }
     }
 }

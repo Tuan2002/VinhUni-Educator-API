@@ -175,6 +175,13 @@ namespace VinhUni_Educator_API.Controllers
             var response = await _examSeasonServices.GetStudentExamResultAsync(turnId);
             return StatusCode(response.StatusCode, response);
         }
-
+        [HttpGet]
+        [Route("get-report/{examSeasonId}")]
+        [SwaggerOperation(Summary = "Xuất báo cáo kết quả thi", Description = "Xuất báo cáo kết quả thi")]
+        public async Task<IActionResult> GetExamSeasonReportAsync(string examSeasonId, string moduleClassId)
+        {
+            var response = await _examSeasonServices.GetExamSeasonReportAsync(examSeasonId, moduleClassId);
+            return StatusCode(response.StatusCode, response);
+        }
     }
 }
