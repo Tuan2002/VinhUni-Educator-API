@@ -10,7 +10,7 @@ namespace VinhUni_Educator_API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize]
     [SwaggerTag("Quản lý danh sách giáo viên")]
     public class TeachersController : ControllerBase
     {
@@ -24,6 +24,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpGet]
         [Route("get-teachers")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [SwaggerOperation(Summary = "Lấy danh sách giáo viên", Description = "Lấy danh sách giáo viên từ hệ thống")]
         public async Task<IActionResult> GetTeachersAsync(int? pageIndex = DEFAULT_PAGE_INDEX, int? limit = DEFAULT_LIMIT)
         {
@@ -40,6 +41,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpGet]
         [Route("get-teachers-by-organization/{organizationId}")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [SwaggerOperation(Summary = "Lấy danh sách giáo viên theo phòng ban", Description = "Lấy danh sách giáo viên theo tổ chức")]
         public async Task<IActionResult> GetTeachersByOrganizationAsync(int organizationId)
         {
@@ -48,6 +50,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpGet]
         [Route("get-teacher-by-id")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [SwaggerOperation(Summary = "Lấy thông tin giáo viên theo ID", Description = "Lấy thông tin giáo viên theo ID")]
         public async Task<IActionResult> GetTeacherByIdAsync(int teacherId)
         {
@@ -56,6 +59,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpGet]
         [Route("get-teacher-by-code")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [SwaggerOperation(Summary = "Lấy thông tin giáo viên theo mã giáo viên", Description = "Lấy thông tin giáo viên theo mã giáo viên")]
         public async Task<IActionResult> GetTeacherByCodeAsync(int teacherCode)
         {
@@ -64,6 +68,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpGet]
         [Route("get-importable/{organizationId}")]
+        [Authorize(Roles = $"{AppRoles.Admin}")]
         [SwaggerOperation(Summary = "Lấy danh sách giáo viên có thể nhập vào hệ thống", Description = "Lấy danh sách giáo viên có thể nhập vào hệ thống theo tổ chức")]
         public async Task<IActionResult> GetImportableTeachersByOrganization(int organizationId)
         {
@@ -72,6 +77,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPost]
         [Route("import-teachers/{organizationId}")]
+        [Authorize(Roles = $"{AppRoles.Admin}")]
         [SwaggerOperation(Summary = "Nhập danh sách giáo viên vào hệ thống", Description = "Nhập danh sách giáo viên vào hệ thống theo tổ chức")]
         public async Task<IActionResult> ImportTeachersByOrganizationAsync(int organizationId, [FromBody][Required] List<ImportTeacherModel> teachers)
         {
@@ -80,6 +86,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpDelete]
         [Route("delete-teacher/{teacherId}")]
+        [Authorize(Roles = $"{AppRoles.Admin}")]
         [SwaggerOperation(Summary = "Xóa giáo viên", Description = "Xóa giáo viên khỏi hệ thống")]
         public async Task<IActionResult> DeleteTeacherAsync(int teacherId)
         {
@@ -88,6 +95,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPut]
         [Route("restore-teacher/{teacherId}")]
+        [Authorize(Roles = $"{AppRoles.Admin}")]
         [SwaggerOperation(Summary = "Khôi phục giáo viên", Description = "Khôi phục giáo viên đã bị xóa khỏi hệ thống")]
         public async Task<IActionResult> RestoreTeacherAsync(int teacherId)
         {
@@ -96,6 +104,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpPut]
         [Route("update-teacher/{teacherId}")]
+        [Authorize(Roles = $"{AppRoles.Admin}")]
         [SwaggerOperation(Summary = "Cập nhật thông tin giáo viên", Description = "Cập nhật thông tin giáo viên")]
         public async Task<IActionResult> UpdateTeacherAsync(int teacherId, [FromBody][Required] UpdateTeacherModel model)
         {
@@ -104,6 +113,7 @@ namespace VinhUni_Educator_API.Controllers
         }
         [HttpGet]
         [Route("search-teacher")]
+        [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [SwaggerOperation(Summary = "Tìm kiếm giáo viên", Description = "Tìm kiếm giáo viên theo tên hoặc mã giáo viên")]
         public async Task<IActionResult> SearchTeacherAsync(string? searchKey, int? limit = DEFAULT_LIMIT_SEARCH)
         {
