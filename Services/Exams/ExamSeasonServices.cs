@@ -320,17 +320,6 @@ namespace VinhUni_Educator_API.Services
                 query = query.Where(x => x.AssignedClasses.Any(ac => ac.ModuleClassId == moduleClassId));
                 query = query.Where(x => x.IsDeleted == false);
                 query = query.OrderByDescending(x => x.CreatedAt);
-                query = query.Select(x => new ExamSeason
-                {
-                    Id = x.Id,
-                    SeasonCode = x.SeasonCode,
-                    SeasonName = x.SeasonName,
-                    Description = x.Description,
-                    StartTime = x.StartTime,
-                    EndTime = x.EndTime,
-                    IsFinished = x.IsFinished,
-                    UpdatedAt = x.UpdatedAt,
-                });
                 var examSeasons = await PageList<ExamSeason, ExamSeasonViewModel>.CreateWithMapperAsync(query, currentPageIndex, currentLimit, _mapper);
                 return new ActionResponse
                 {

@@ -212,7 +212,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
+                var exam = await _context.Exams.Select(e => new Exam { Id = e.Id, CreatedById = e.CreatedById, IsDeleted = e.IsDeleted }).FirstOrDefaultAsync(x => x.Id == examId);
                 if (exam == null || exam.IsDeleted)
                 {
                     return new ActionResponse
@@ -232,7 +232,7 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 exam.IsDeleted = true;
-                _context.Exams.Update(exam);
+                _context.Exams.Entry(exam).Property(x => x.IsDeleted).IsModified = true;
                 await _context.SaveChangesAsync();
                 return new ActionResponse
                 {
@@ -266,7 +266,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn cần phải đăng nhập để thực hiện chức năng này"
                     };
                 }
-                var exam = await _context.Exams.Select(e => new { e.Id, e.CreatedById, e.ExamName, e.ExamDescription, e.IsPublished, e.IsDeleted }).FirstOrDefaultAsync(x => x.Id == examId);
+                var exam = await _context.Exams.FirstOrDefaultAsync(x => x.Id == examId);
                 if (exam == null || exam.IsDeleted)
                 {
                     return new ActionResponse
@@ -285,7 +285,7 @@ namespace VinhUni_Educator_API.Services
                         Message = "Bạn không có quyền xem câu hỏi trong đề thi này"
                     };
                 }
-                var query = _context.ExamQuestions.AsQueryable();
+                var query = _context.ExamQuestions.AsQueryable().AsNoTracking();
                 query = query.Where(x => x.ExamId == examId);
                 query = query.OrderByDescending(x => x.AddedAt);
                 var questions = await query.Select(x => x.Question).ToListAsync();
@@ -296,13 +296,7 @@ namespace VinhUni_Educator_API.Services
                     Message = "Lấy danh sách câu hỏi của đề thi thành công",
                     Data = new
                     {
-                        ExamInfo = new ExamViewModel
-                        {
-                            Id = exam.Id,
-                            ExamName = exam.ExamName,
-                            ExamDescription = exam.ExamDescription,
-                            IsPublished = exam.IsPublished,
-                        },
+                        ExamInfo = _mapper.Map<ExamViewModel>(exam),
                         Questions = _mapper.Map<List<QuestionViewModel>>(questions)
                     }
                 };
