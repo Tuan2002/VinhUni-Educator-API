@@ -46,17 +46,17 @@ namespace VinhUni_Educator_API.Controllers
         [Authorize(Roles = $"{AppRoles.Admin},{AppRoles.Teacher}")]
         [Route("get-by-teacher/{teacherId}")]
         [SwaggerOperation("Lấy danh sách lớp học phần theo giảng viên")]
-        public async Task<IActionResult> GetClassByTeacherAsync(int teacherId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? pageSize = DEFAULT_LIMIT)
+        public async Task<IActionResult> GetClassByTeacherAsync(int teacherId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? pageSize = DEFAULT_LIMIT, [FromQuery] bool? cached = false)
         {
-            var response = await _classModuleServices.GetClassByTeacherAsync(teacherId, semesterId, pageIndex, pageSize);
+            var response = await _classModuleServices.GetClassByTeacherAsync(teacherId, semesterId, pageIndex, pageSize, cached);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
         [Route("get-by-student/{studentId}")]
         [SwaggerOperation("Lấy danh sách lớp học phần theo sinh viên")]
-        public async Task<IActionResult> GetClassByStudentAsync(int studentId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT)
+        public async Task<IActionResult> GetClassByStudentAsync(int studentId, [FromQuery] int semesterId, [FromQuery] int? pageIndex = DEFAULT_PAGE_INDEX, [FromQuery] int? limit = DEFAULT_LIMIT, bool? cached = false)
         {
-            var response = await _classModuleServices.GetClassByStudentAsync(studentId, semesterId, pageIndex, limit);
+            var response = await _classModuleServices.GetClassByStudentAsync(studentId, semesterId, pageIndex, limit, cached);
             return StatusCode(response.StatusCode, response);
         }
         [HttpGet]
