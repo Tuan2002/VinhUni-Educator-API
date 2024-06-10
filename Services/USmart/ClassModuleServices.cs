@@ -237,7 +237,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetClassByTeacherAsync(int teacherId, int semesterId, int? pageIndex = DEFAULT_PAGE_INDEX, int? pageSize = DEFAULT_PAGE_SIZE)
+        public async Task<ActionResponse> GetClassByTeacherAsync(int teacherId, int semesterId, int? pageIndex = DEFAULT_PAGE_INDEX, int? pageSize = DEFAULT_PAGE_SIZE, bool? cached = true)
         {
             try
             {
@@ -255,6 +255,8 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 string cacheKey = $"{teacherId}_{semesterId}_{currentPage}_{currentSize}";
+                if (!cached ?? false)
+                    goto skipCache;
                 var cacheData = await _cacheServices.GetDataAsync<PageList<ModuleClass, ClassModuleViewModel>>(cacheKey);
                 if (cacheData != null)
                 {
@@ -266,11 +268,12 @@ namespace VinhUni_Educator_API.Services
                         Data = cacheData
                     };
                 }
+            skipCache:
                 var query = _context.ModuleClasses.AsQueryable();
                 query = query.Where(mc => mc.TeacherId == teacherId && mc.SemesterId == semesterId);
                 query = query.Where(mc => mc.IsDeleted == false);
                 var classModules = await PageList<ModuleClass, ClassModuleViewModel>.CreateWithMapperAsync(query, currentPage, currentSize, _mapper);
-                _ = _cacheServices.SetDataAsync(cacheKey, classModules, DateTime.UtcNow.AddMinutes(10));
+                _ = _cacheServices.SetDataAsync(cacheKey, classModules, DateTime.UtcNow.AddMinutes(5));
                 return new ActionResponse
                 {
                     StatusCode = StatusCodes.Status200OK,
@@ -290,7 +293,7 @@ namespace VinhUni_Educator_API.Services
                 };
             }
         }
-        public async Task<ActionResponse> GetClassByStudentAsync(int studentId, int semesterId, int? pageIndex = DEFAULT_PAGE_INDEX, int? pageSize = DEFAULT_PAGE_SIZE)
+        public async Task<ActionResponse> GetClassByStudentAsync(int studentId, int semesterId, int? pageIndex = DEFAULT_PAGE_INDEX, int? pageSize = DEFAULT_PAGE_SIZE, bool? cached = true)
         {
             try
             {
@@ -308,6 +311,8 @@ namespace VinhUni_Educator_API.Services
                     };
                 }
                 string cacheKey = $"{studentId}_{semesterId}_{currentPage}_{currentSize}";
+                if (!cached ?? false)
+                    goto skipCache;
                 var cacheData = await _cacheServices.GetDataAsync<PageList<ModuleClass, ClassModuleViewModel>>(cacheKey);
                 if (cacheData != null)
                 {
@@ -319,11 +324,12 @@ namespace VinhUni_Educator_API.Services
                         Data = cacheData
                     };
                 }
+            skipCache:
                 var query = _context.ModuleClassStudents.AsQueryable();
                 query = query.Where(mcs => mcs.StudentId == studentId && mcs.SemesterId == semesterId);
                 var classModulesQuery = query.Select(mcs => mcs.ModuleClass);
                 var classModules = await PageList<ModuleClass, ClassModuleViewModel>.CreateWithMapperAsync(classModulesQuery, currentPage, currentSize, _mapper);
-                _ = _cacheServices.SetDataAsync(cacheKey, classModules, DateTime.UtcNow.AddMinutes(10));
+                _ = _cacheServices.SetDataAsync(cacheKey, classModules, DateTime.UtcNow.AddMinutes(5));
 
                 return new ActionResponse
                 {
