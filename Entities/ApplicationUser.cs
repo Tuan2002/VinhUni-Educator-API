@@ -13,7 +13,14 @@ namespace VinhUni_Educator_API.Entities
         public string? Avatar { get; set; }
         public string? Address { get; set; }
         public DateTime CreatedAt { get; set; }
+        public bool IsPasswordChanged { get; set; } = false;
         public bool? IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public string? DeletedBy { get; set; }
         public virtual ICollection<RefreshToken>? RefreshTokens { get; set; }
+        public string GetFullName()
+        {
+            return $"{FirstName} {LastName}";
+        }
     }
 }

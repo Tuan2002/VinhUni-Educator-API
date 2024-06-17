@@ -13,27 +13,28 @@ namespace VinhUni_Educator_API.Context
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            SeedData(modelBuilder);
+            // SeedData(modelBuilder);
         }
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseLazyLoadingProxies();
             base.OnConfiguring(optionsBuilder);
         }
-        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
         public void SeedData(ModelBuilder modelBuilder)
         {
             ApplicationUser ExampleUser = new ApplicationUser
             {
                 UserName = "admin",
                 NormalizedUserName = "admin".ToUpper(),
-                Email = "admin@admin.com",
-                NormalizedEmail = "admin@admin.com".ToUpper(),
+                Email = "tomtepfa@gmail.com",
+                NormalizedEmail = "TOMTEPFA@GMAIL.COM".ToUpper(),
                 EmailConfirmed = true,
                 Gender = 1,
                 FirstName = "Nguyễn Ngọc Anh",
                 LastName = "Tuấn",
-                Address = "Vinh, Nghệ An",
+                Address = "TP.Vinh, Nghệ An",
+                USmartId = 78592,
                 CreatedAt = DateTime.UtcNow,
                 DateOfBirth = new DateOnly(2002, 07, 02),
                 PhoneNumber = "0123456789"
@@ -55,5 +56,33 @@ namespace VinhUni_Educator_API.Context
             modelBuilder.Entity<IdentityRole>().HasData(ExampleRole);
             modelBuilder.Entity<IdentityUserRole<string>>().HasData(UserRole);
         }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<USmartToken> USmartTokens { get; set; }
+        public DbSet<Organization> Organizations { get; set; }
+        public DbSet<SyncAction> SyncActions { get; set; }
+        public DbSet<Major> Majors { get; set; }
+        public DbSet<Course> Courses { get; set; }
+        public DbSet<TrainingProgram> TrainingPrograms { get; set; }
+        public DbSet<PrimaryClass> PrimaryClasses { get; set; }
+        public DbSet<Student> Students { get; set; }
+        public DbSet<Teacher> Teachers { get; set; }
+        public DbSet<SchoolYear> SchoolYears { get; set; }
+        public DbSet<Semester> Semesters { get; set; }
+        public DbSet<Module> Modules { get; set; }
+        public DbSet<ModuleClass> ModuleClasses { get; set; }
+        public DbSet<ModuleClassStudent> ModuleClassStudents { get; set; }
+        public DbSet<Category> Categories { get; set; }
+        public DbSet<SharedCategory> SharedCategories { get; set; }
+        public DbSet<QuestionKit> QuestionKits { get; set; }
+        public DbSet<Question> Questions { get; set; }
+        public DbSet<QuestionAnswer> QuestionAnswers { get; set; }
+        public DbSet<Exam> Exams { get; set; }
+        public DbSet<ExamQuestion> ExamQuestions { get; set; }
+        public DbSet<ExamSeason> ExamSeasons { get; set; }
+        public DbSet<ExamAssignedClass> ExamAssignedClasses { get; set; }
+        public DbSet<ExamParticipant> ExamParticipants { get; set; }
+        public DbSet<ExamTurn> ExamTurns { get; set; }
+        public DbSet<ExamResult> ExamResults { get; set; }
+        public DbSet<ExamResultDetail> ExamResultDetails { get; set; }
     }
 }

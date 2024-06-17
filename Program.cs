@@ -1,6 +1,9 @@
 ﻿using System.Text;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +14,7 @@ using VinhUni_Educator_API.Entities;
 using VinhUni_Educator_API.Interfaces;
 using VinhUni_Educator_API.Middlewares;
 using VinhUni_Educator_API.Services;
+using VinhUni_Educator_API.Services.Managers;
 using VinhUni_Educator_API.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,12 +25,13 @@ var issuer = builder.Configuration["JWT:ValidIssuer"] ?? throw new InvalidOperat
 var audience = builder.Configuration["JWT:ValidAudience"] ?? throw new InvalidOperationException("Audience invalid.");
 var policyName = "CORSPolicy";
 // Add services to configure CORS
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: policyName,
         policy =>
         {
-            policy.WithOrigins("http://localhost:3000", "https://educator.vinhuniversity.local", "https://educator.vinhuniversity.edu.vn")
+            policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? throw new InvalidOperationException("Allowed origins invalid"))
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -43,7 +48,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
 });
 // Add services to Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => { options.SignIn.RequireConfirmedAccount = false; })
-    .AddEntityFrameworkStores<ApplicationDBContext>();
+    .AddEntityFrameworkStores<ApplicationDBContext>()
+    .AddDefaultTokenProviders();
 // Add services to JWT
 builder.Services.AddAuthentication(options =>
 {
@@ -85,9 +91,16 @@ builder.Services.AddAuthentication(options =>
         }
     };
 });
+// Add services to Data Protection
+builder.Services.AddDataProtection()
+    .UseCryptographicAlgorithms(new AuthenticatedEncryptorConfiguration()
+    {
+        EncryptionAlgorithm = EncryptionAlgorithm.AES_256_CBC,
+        ValidationAlgorithm = ValidationAlgorithm.HMACSHA256
+    });
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddNewtonsoftJson();
 builder.Services.AddHttpClient();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -105,7 +118,25 @@ builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddScoped<IAuthServices, AuthServices>();
 builder.Services.AddScoped<IJwtServices, JwtServices>();
 builder.Services.AddScoped<ICacheServices, CacheServices>();
-
+builder.Services.AddScoped<IOrganizationServices, OrganizationServices>();
+builder.Services.AddScoped<IMajorServices, MajorServices>();
+builder.Services.AddScoped<ICourseServices, CourseServices>();
+builder.Services.AddScoped<IProgramServices, ProgramServices>();
+builder.Services.AddScoped<IPrimaryClassServices, PrimaryClassServices>();
+builder.Services.AddScoped<IUserServices, UserServices>();
+builder.Services.AddScoped<IAccountServices, AccountServices>();
+builder.Services.AddScoped<IStudentServices, StudentServices>();
+builder.Services.AddScoped<ITeacherServices, TeacherServices>();
+builder.Services.AddScoped<ISemesterServices, SemesterServices>();
+builder.Services.AddScoped<IModuleServices, ModuleServices>();
+builder.Services.AddScoped<IClassModuleServices, ClassModuleServices>();
+builder.Services.AddScoped<IClassManagerServices, ClassManagerServices>();
+builder.Services.AddScoped<ICategoryServices, CategoryServices>();
+builder.Services.AddScoped<IQuestionServices, QuestionServices>();
+builder.Services.AddScoped<IQuestionManagerServices, QuestionManagerServices>();
+builder.Services.AddScoped<IExamManagerServices, ExamManagerServices>();
+builder.Services.AddScoped<IExamSeasonServices, ExamSeasonServices>();
+builder.Services.AddScoped<IStudentExamServices, StudentExamServices>();
 // Add services to configure auto mapper
 var mapperConfig = new MapperConfiguration(mc =>
 {
@@ -118,14 +149,14 @@ var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(config =>
-    {
-        config.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
-    });
+    // app.ApplyMigrations();
 }
+app.UseSwagger();
+app.UseSwaggerUI(config =>
+{
+    config.SwaggerEndpoint("v1/swagger.json", "VinhUNI Educator API V1");
+});
 app.UseCors(policyName);
-app.UseHttpsRedirection();
 app.UseMiddleware<VerifyRevokedToken>();
 app.UseAuthentication();
 app.UseAuthorization();

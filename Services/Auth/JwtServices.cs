@@ -73,8 +73,8 @@ namespace VinhUni_Educator_API.Services
                 }
                 authClaims.Add(new Claim(JwtRegisteredClaimNames.Jti, idToken));
                 var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(refreshTokenSecret));
-                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInDays"], out int tokenValidityInDays);
-                var expiration = DateTime.UtcNow.AddDays(tokenValidityInDays);
+                _ = int.TryParse(_configuration["JWT:RefreshTokenValidityInMinutes"], out int tokenValidityInMinutes);
+                var expiration = DateTime.UtcNow.AddMinutes(tokenValidityInMinutes);
                 var refreshToken = new JwtSecurityToken(
                     issuer: _configuration["JWT:ValidIssuer"],
                     audience: _configuration["JWT:ValidAudience"],
@@ -174,6 +174,23 @@ namespace VinhUni_Educator_API.Services
                 return false; // Token is invalid
             }
         }
+        public DateTime? GetTokenExpiration(string token)
+        {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            try
+            {
+                var checkToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+                if (checkToken != null)
+                {
+                    return checkToken.ValidTo;
+                }
+                return default;
+            }
+            catch (Exception)
+            {
+                return default;
+            }
+        }
         public DateTimeOffset GetRemainingExpiration(string token)
         {
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -191,8 +208,12 @@ namespace VinhUni_Educator_API.Services
                 return new DateTimeOffset(DateTime.UtcNow.AddSeconds(10));
             }
         }
-        public bool IsTokenExpired(string token)
+        public bool IsTokenExpired(string? token)
         {
+            if (string.IsNullOrEmpty(token))
+            {
+                return true;
+            }
             var tokenHandler = new JwtSecurityTokenHandler();
             try
             {
